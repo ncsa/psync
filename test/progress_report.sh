@@ -1,5 +1,12 @@
 #!/bin/sh
 
+configfile="${BASH_SOURCE%/*}/../config/bashrc"
+[[ -r $configfile ]] || {
+  echo "ERROR Can't find config file '$configfile'. Exiting"
+  exit 1
+}
+source "$configfile"
+
 PYTHON=/mnt/a/settools/bin/python
 tmp=$( mktemp )
 tmp2=$( mktemp )
@@ -17,7 +24,7 @@ function is_file_open {
     lsof "$1" 2>/dev/null
 }
 
-pfx=$( ls -t ~aloftus/var/log/*.INFO | head -1 | sed -e 's/.INFO$//' )
+pfx=$( ls -t $PSYNCLOGDIR/*.INFO | head -1 | sed -e 's/.INFO$//' )
 
 LOGFILE=${pfx}.INFO
 ERRFILE=${pfx}.ERROR
@@ -26,22 +33,22 @@ WARNINGFILE=${pfx}.WARNING
 echo
 echo PSYNC ERRORS
 if [[ -f $ERRFILE ]] ; then
-    $PYTHON ~aloftus/psync/test/parse_psync_errlog.py -n $ERRFILE
+    $PYTHON $PSYNCBASEDIR/test/parse_psync_errlog.py -n $ERRFILE
 else
     echo "  n/a"
 fi
 
 echo
 echo PSYNC WORKER ERRORS
-find ~aloftus/var/psync_service/ -name '*.log' \
-| xargs $PYTHON ~aloftus/psync/test/parse_worker_errlog.py \
+find $PSYNCVARDIR/psync_service/ -name '*.log' \
+| xargs $PYTHON $PSYNCBASEDIR/test/parse_worker_errlog.py \
 >$tmp2
 head -n -4 $tmp2 > $tmp
 dumptmp
 
 echo
 echo REDIS ERRORS
-~aloftus/psync/test/parse_redis_log.sh >$tmp
+$PSYNCBASEDIR/test/parse_redis_log.sh >$tmp
 dumptmp
 
 echo
@@ -51,7 +58,7 @@ ls -1sh ${pfx}*
 echo
 echo WARNINGS
 if [[ -f $WARNINGFILE ]] ; then
-    ~aloftus/psync/test/parse_psync_warnlog.py $WARNINGFILE
+    $PSYNCBASEDIR/test/parse_psync_warnlog.py $WARNINGFILE
 else
     echo "  n/a"
 fi
@@ -59,7 +66,7 @@ fi
 # Parse infolog
 # tmp = progress info
 # tmp2 = duplicate dirs
-~aloftus/psync/test/parse_psync_infolog.py $LOGFILE > $tmp 2>$tmp2
+$PSYNCBASEDIR/test/parse_psync_infolog.py $LOGFILE > $tmp 2>$tmp2
 
 ### This was moved to parse_psync_infolog.py
 #echo 

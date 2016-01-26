@@ -1,4 +1,9 @@
-source ~aloftus/psync/config/bashrc
+configfile="${BASH_SOURCE%/*}/../config/bashrc"
+[[ -r $configfile ]] || {
+  echo "ERROR Can't find config file '$configfile'. Exiting"
+  exit 1
+}
+source "$configfile"
 
 set -x
 RMQCTL=$RABBITMQ_HOME/sbin/rabbitmqctl
@@ -8,7 +13,7 @@ erlbinpath=$( dirname $( readlink -e $PATHTOERL ) )
 vhost="$PSYNCRMQVHOST/"
 
 PATH=$PATH:$erlbinpath
-HOME=~aloftus/var/rabbitmq_psync
+HOME=$PSYNCVARDIR/rabbitmq_psync
 
 $RMQCTL add_user $PSYNCRMQUSER $PSYNCRMQPASS
 

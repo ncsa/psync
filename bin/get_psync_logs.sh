@@ -1,7 +1,11 @@
 #!/bin/sh
 
-max_iterations=1
-pause=300
+configfile="${BASH_SOURCE%/*}/../config/bashrc"
+[[ -r $configfile ]] || {
+  echo "ERROR Can't find config file '$configfile'. Exiting"
+  exit 1
+}
+source "$configfile"
 
 #
 # Usage
@@ -15,6 +19,10 @@ function print_usage
   echo "             -p <N> number of seconds to pause between iterations" >&2
   echo "" >&2
 }
+
+# Default option settings
+max_iterations=1
+pause=300
 
 #
 # Process command line options
@@ -51,7 +59,7 @@ logfile_pfx="$1"
 for i in $(seq $max_iterations); do
   date
   start=$( date +%s )
-  ~aloftus/psync/bin/view_redis_queue -l $logfile_pfx
+  $PSYNCBASEDIR/bin/view_redis_queue -l $logfile_pfx
   end=$( date +%s )
   let "elapsed = $end - $start"
   echo Elapsed secs $elapsed

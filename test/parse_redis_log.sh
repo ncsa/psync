@@ -1,6 +1,13 @@
 #!/bin/sh
 
-find ~aloftus/var/redis_psync/ -type f -name redis_psync.log \
+configfile="${BASH_SOURCE%/*}/../config/bashrc"
+[[ -r $configfile ]] || {
+  echo "ERROR Can't find config file '$configfile'. Exiting"
+  exit 1
+}
+source "$configfile"
+
+find $PSYNCVARDIR/redis_psync/ -type f -name redis_psync.log \
 | xargs grep -v -E \
 -e 'Server started'  \
 -e 'server is now ready' \

@@ -1,9 +1,17 @@
 #!/bin/sh
 
+configfile="${BASH_SOURCE%/*}/../config/bashrc"
+[[ -r $configfile ]] || {
+  echo "ERROR Can't find config file '$configfile'. Exiting"
+  exit 1
+}
+source "$configfile"
+
+
 srcdirs=( \
-    ~aloftus/var/redis_psync \
-    ~aloftus/var/psync_service \
-    ~aloftus/var/rabbitmq_psync/log \
+    $PSYNCVARDIR/redis_psync \
+    $PSYNCVARDIR/psync_service \
+    $PSYNCVARDIR/rabbitmq_psync/log \
     )
 
 for d in "${srcdirs[@]}"; do

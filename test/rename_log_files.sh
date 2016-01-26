@@ -1,5 +1,12 @@
 #!/bin/sh
 
+configfile="${BASH_SOURCE%/*}/../config/bashrc"
+[[ -r $configfile ]] || {
+  echo "ERROR Can't find config file '$configfile'. Exiting"
+  exit 1
+}
+source "$configfile"
+
 [[ $# -ne 1 ]] && {
   echo 'Missing original file path'
   exit 1
@@ -15,7 +22,7 @@ testfn="$dn/${fn}.INFO"
   exit 1
 }
 
-ts=$( ~aloftus/psync/test/catcbor.py --ini -H 1 $fullpath \
+ts=$( $PSYNCBASEDIR/test/catcbor.py --ini -H 1 $fullpath \
 | awk '$1 == "ts" {print $NF}' )
 new_f_pfx="${ts}.${fn}"
 
