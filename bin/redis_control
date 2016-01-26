@@ -1,0 +1,228 @@
+#!/bin/sh
+#
+# Simple Redis init.d script conceived to work on Linux systems
+# as it makes use of the /proc filesystem.
+
+
+function croak {
+    echo "ERROR $*" 1>&2
+    exit 99
+}
+
+
+function die {
+    echo "$*" 1>&2
+    exit 1
+}
+
+
+configfile="${BASH_SOURCE%/*}/../config/bashrc"
+[[ -r $configfile ]] || croak "ERROR Can't find config file '$configfile'. Exiting"
+source "$configfile"
+
+HOST=$( hostname )
+PRG="$( basename $0 )"
+REDISPORT=6379
+REDISDB=2
+EXEC="${PSYNCBASEDIR}/bin/redis-server"
+CLIEXEC="${PSYNCBASEDIR}/bin/redis-cli"
+MAINCONF="${PSYNCBASEDIR}/config/${PRG}.conf"
+VAR=${PSYNCVARDIR}/${PRG}/${HOST}
+PIDFILE="$VAR/${PRG}.pid"
+CFGFILE="$VAR/${PRG}.conf"
+LOGFILE="$VAR/${PRG}.log"
+WORKDIR="$VAR"
+
+REDIS_BIND_IP=""
+
+
+function is_local_process_running {
+    [[ -f "$PIDFILE" ]]
+}
+
+
+function get_bind_ip {
+    REDIS_BIND_IP=$(
+        ip route get "${PSYNCINETPREFIX}" \
+        | awk '/ src / {print $NF; exit}'
+        )
+    [[ -z "$REDIS_BIND_IP" ]] && \
+        croak "Unable to get ip for redis"
+}
+
+
+function do_setup {
+    # log and persistence data directory
+    mkdir -p "${VAR}"
+    [[ -d "$VAR" ]] || \
+        croak "Unable to make var dir '$VAR'"
+    # avoid issues with background processes (like save DB)
+    /sbin/sysctl vm.overcommit_memory=1
+    vmovercommit=$( /sbin/sysctl -n vm.overcommit_memory )
+    [[ $vmovercommit -ne 1 ]] && \
+        croak "Unable to set vm.overcommit_memory to 1, current value is '$vmovercommit'"
+    # adjust system setting for TCP backlog
+    maxconn=$( /sbin/sysctl -n net.core.somaxconn )
+    if [[ $maxconn -lt 65535 ]] ; then
+        /sbin/sysctl -w net.core.somaxconn=65535
+        maxconn=$( /sbin/sysctl -n net.core.somaxconn )
+        [[ $maxconn -lt 65535 ]] && \
+            croak "net.core.somaxconn too small '$maxconn'"
+    fi
+    # disable transparent huge pages
+    thp_path=''
+    if [[ -d /sys/kernel/mm/transparent_hugepage ]] ; then
+        thp_path=/sys/kernel/mm/transparent_hugepage
+    elif [[ -d /sys/kernel/mm/redhat_transparent_hugepage ]] ; then
+        thp_path=/sys/kernel/mm/redhat_transparent_hugepage
+    fi
+    if [[ -n "$thp_path" ]] ; then
+        echo -n "Transparent Huge Pages = "
+        echo never > /sys/kernel/mm/transparent_hugepage/enabled
+        cat /sys/kernel/mm/transparent_hugepage/enabled \
+        | tr ' ' "\n" \
+        | fgrep '[' \
+        | grep never || croak "Failed to disable Transparent Huge Pages"
+    fi
+}
+
+
+function redis_url_exists {
+    [[ -f "$PSYNCREDISURLFILE" ]] && \
+    grep -q BROKER_URL "$PSYNCREDISURLFILE" 
+}
+
+
+function save_redis_url {
+    #BROKER_URL = 'redis://10.128.0.13:6379/2'
+    redis_url="redis://${REDIS_BIND_IP}:${REDISPORT}/${REDISDB}"
+    redis_url_exists && croak "Redis url already exists in $PSYNCREDISURLFILE"
+    sed -i.~ -e "\$aBROKER_URL = '$redis_url'" "$PSYNCREDISURLFILE"
+}
+
+
+function rm_redis_url {
+    sed -i.~ -e '/BROKER_URL = /d' "$PSYNCREDISURLFILE"
+}
+
+
+function broker_file_exists_if_needed {
+    # Returns 0 (success/true) if redis IS broker -AND- broker file exists
+    # Returns 1 (failure/false) otherwise
+    # if redis is celery broker, ensure broker is not already running
+    [[ "x$PSYNCBROKERTYPE" == " xredis" ]] && \
+        [[ -e "$PSYNCBROKERURLFILE" ]]
+}
+
+
+function save_broker_url {
+    [[ "x$PSYNCBROKERTYPE" == "xredis" ]] || return 0
+    ln -s "$PSYNCREDISURLFILE" "$PSYNCBROKERURLFILE"
+}
+
+
+function rm_broker_url {
+    [[ "x$PSYNCBROKERTYPE" == "xredis" ]] || return 0
+    rm "$PSYNCBROKERURLFILE"
+}
+
+
+function startup_sanity_check {
+    # check for running process locally
+    is_local_process_running && \
+        croak "$PIDFILE exists, process is already running or crashed"
+    # check for running service elsewhere
+    redis_url_exists && {
+        remote_url=$( grep BROKER_URL "$PSYNCREDISURLFILE" )
+        croak "Remote redis already running at $remote_url"
+        }
+    # if redis is celery broker, ensure broker is not already running
+    broker_file_exists_if_needed && {
+        broker_url=$( grep BROKER_URL "$PSYNCBROKERURLFILE" )
+        croak "Broker process already running at $broker_url"
+        }
+}
+
+
+function mk_conf {
+    cat <<END_MK_CFG >"$CFGFILE"
+include ${MAINCONF}
+daemonize yes
+pidfile ${PIDFILE}
+port ${REDISPORT}
+logfile ${LOGFILE}
+dir ${WORKDIR}
+bind 127.0.0.1 ${REDIS_BIND_IP}
+END_MK_CFG
+}
+
+
+
+
+COMMANDS=( start stop status info server clients memory persistence stats replication cpu keyspace )
+function usage {
+    echo "Usage: $PRG <command>"
+    echo "    where <command> is one of:"
+    echo "    ${COMMANDS[@]}"
+}
+
+
+case "$1" in
+    start)
+            startup_sanity_check
+            get_bind_ip
+            do_setup
+            mk_conf || croak "Unable to write conf file"
+            save_redis_url || croak "Unable to save redis url to file"
+            save_broker_url || croak "Unable to save broker url to file"
+            echo "Starting Redis server..."
+            $EXEC "$CFGFILE"
+        ;;
+    stop)
+        is_local_process_running || die "No local process found"
+        PID=$(cat "$PIDFILE")
+        echo "Stopping ..."
+        $CLIEXEC -p $REDISPORT shutdown
+        while [ -x /proc/${PID} ]
+        do
+            echo "Waiting for Redis to shutdown ..."
+            sleep 1
+        done
+        rm_redis_url
+        rm_broker_url
+        echo "Redis stopped"
+        ;;
+    status)
+        if ! is_local_process_running ; then
+            echo "No local process found"
+            if redis_url_exists ; then
+                remote_url=$( grep BROKER_URL "$PSYNCREDISURLFILE" )
+                echo "Remote process found at $remote_url"
+            else
+                echo "No remote process found"
+            fi
+        else
+            $CLIEXEC -p $REDISPORT info server \
+            | grep 'redis_version\|redis_mode\|process_id\|tcp_port\|uptime\|config_file'
+            [[ -e "$PSYNCREDISURLFILE" ]] && grep BROKER_URL "$PSYNCREDISURLFILE"
+        fi
+        ;;
+    info)
+        is_local_process_running || die "No local process found"
+        $CLIEXEC -p $REDISPORT info
+        ;;
+    server|clients|memory|persistence|stats|replication|cpu|keyspace)
+        is_local_process_running || die "No local process found"
+        $CLIEXEC -p $REDISPORT info $1
+        ;;
+    clean)
+        # After a failed start, there may be cruft to clean up.  This option is
+        # undocumented to prevent breaking things that are running.  It is for
+        # debugging, mainly. Use it carefully.
+        rm_redis_url
+        rm_broker_url
+        ;;
+    *)
+        usage
+        ;;
+esac

@@ -1,0 +1,16 @@
+#!/bin/sh -e
+
+configfile="${BASH_SOURCE%/*}/../config/bashrc"
+[[ -r $configfile ]] || {
+  echo "ERROR Can't find config file '$configfile'. Exiting"
+  exit 1
+}
+source "$configfile"
+
+source "$PSYNCVENVDIR/bin/activate"
+
+PRG=$( basename "$0" )
+
+python ${PSYNCBASEDIR}/scripts/${PRG}.py $*
+
+deactivate

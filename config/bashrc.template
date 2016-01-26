@@ -1,0 +1,101 @@
+# INSTRUCTIONS:
+# 1. copy this file to bashrc
+# 2. edit bashrc - set the variables to match the local environment
+
+###
+### Variables used by other psync startup scripts
+###
+# PYLUTBASEDIR - if pylut lib is in ~user/pylut/pylut.py
+#                 then PYLUTBASEDIR=~user/pylut
+export PYLUTBASEDIR=~user/pylut
+
+# PSYNCBASEDIR - if psync is in ~user/psync/lib/psync.py
+#             then PSYNCBASEDIR=~user/psync
+export PSYNCBASEDIR=~user/psync
+
+# Python Venv where celery, cbor, redis, rmq are installed
+export PSYNCVENVDIR=/path/to/python/virtualenv/dir
+
+# Path where redis and rmq servers write their data and log files
+# Using a shared filesystem allows easy access to log files
+export PSYNCVARDIR=/path/to/write/redis/and/rmq/data
+
+# Path where psync/bin/get_psync_logs.sh will write log files
+export PSYNCLOGDIR=/path/to/common/log/dir
+
+# PSYNCSOFTTIMEOUT
+# PSYNCHARDTIMEOUT
+# Max time to allow a task to run. 
+# Softtimeout gives psync a chance to clean up.
+# Hardtimelimit kills the task outright.
+export PSYNCSOFTTIMEOUT=14400  #4 hours
+export PSYNCHARDTIMEOUT=14700  #4 hours + 5 mins
+
+# PSYNCCONCURRENCY
+# Max Number of procs to run on each worker node
+# Can run less than max using set_pool_size
+export PSYNCCONCURRENCY=8
+
+###
+### Message queue settings
+###
+
+# IP inet (cidr) prefix
+# Redis start script will look for a local ip on this network only and bind to it
+# All workers, RMQ and Redis must connect to this network
+export PSYNCINETPREFIX="10.128/14"
+
+# Broker type: rmq or redis
+# DO NOT USER REDIS as broker unless you like pain.
+# (Redis does not scale and WILL FAIL in production,
+# use redis only for debugging on a single node)
+# If you really must know more details, google "redis duplicate tasks"
+export PSYNCBROKERTYPE=rmq
+
+#
+# Redis specific
+#
+# PSYNCREDISURLFILE -> probably don't need to touch this
+export PSYNCREDISURLFILE="${PSYNCBASEDIR}/config/redis_celery_conf.py"
+
+#
+# RabbitMQ specific
+#
+# PSYNCRMQURLFILE -> probably don't need to touch this
+export PSYNCRMQURLFILE="${PSYNCBASEDIR}/config/rmq_celery_conf.py"
+
+# Set a random username, password, and vhost for RMQ
+export PSYNCRMQUSER=USERNAME
+export PSYNCRMQPASS=PASSWORD
+export PSYNCRMQVHOST=PSYNCVHOST
+
+# RABBITMQ_HOME - path to 'rmq' executable
+export RABBITMQ_HOME=/path/to/rmq
+
+# a valid user to run rmq service as
+export RABBITMQ_RUNASUSER=aloftus
+
+# path to 'erl' executable
+export PATHTOERL=/path/to/bin/erl
+
+# PSYNCBROKERURLFILE -> probably don't need to touch this
+export PSYNCBROKERURLFILE="${PSYNCBASEDIR}/config/broker_url.py"
+
+
+###
+### Python specific settings
+###
+
+# PYLUTRSYNCPATH - path to rsync (must be set for pylut library)
+export PYLUTRSYNCPATH=/usr/bin/rsync
+
+# PYLUTLFSPATH - path to lfs (must be set for pylut library)
+export PYLUTLFSPATH=/sw/user/scripts/lfs
+
+# PYLUTRSYNCMAXSIZE - max filesize in bytes for rsync native copy
+#                     files larger that this will be copied using something
+#                     more efficient (currently dd)
+export PYLUTRSYNCMAXSIZE=536870912
+
+# PYTHONPATH -> probably don't need to touch this
+export PYTHONPATH=${PSYNCBASEDIR}/lib:${PSYNCBASEDIR}/config:${PYLUTBASEDIR}

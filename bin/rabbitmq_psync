@@ -1,0 +1,155 @@
+#!/bin/sh
+#
+# Wrapper for rabbitmq server
+
+
+function croak {
+    echo "ERROR $*" 1>&2
+    exit 99
+}
+
+
+configfile="${BASH_SOURCE%/*}/../config/bashrc"
+[[ -r $configfile ]] || croak "ERROR Can't find config file '$configfile'. Exiting"
+source "$configfile"
+
+
+HOST=$( hostname )
+PRG="$( basename $0 )"
+RMQPORT=5672
+RMQSERVER="$RABBITMQ_HOME/sbin/rabbitmq-server"
+RMQCTL="$RABBITMQ_HOME/sbin/rabbitmqctl"
+RMQ_BIND_IP=""
+
+export RABBITMQ_MNESIA_BASE="$PSYNCVARDIR/$PRG/mnesia"
+export RABBITMQ_LOG_BASE="$PSYNCVARDIR/$PRG/log"
+
+
+function find_erl {
+    which erl &>/dev/null && return 0
+    [[ -z "$PATHTOERL" ]] && croak "Env var PATHTOERL is empty, cant find erl"
+    erl_exe=$( readlink -e "$PATHTOERL" )
+    [[ -x "$erl_exe" ]] || croak "Erl '$erl_exe' is not executable"
+    dn=$( dirname "$PATHTOERL" )
+    if ! echo $PATH | /bin/egrep -q "(^|:)$dn($|:)" ; then
+        export PATH=${PATH}:$dn
+    fi
+    which erl &>/dev/null
+}
+
+function get_bind_ip {
+    RMQ_BIND_IP=$(
+        ip route get "${PSYNCINETPREFIX}" \
+        | awk '/ src / {print $NF; exit}'
+        )
+    [[ -z "$RMQ_BIND_IP" ]] && \
+        croak "Unable to get ip for rabbitmq"
+}
+
+
+function do_setup {
+    mkdir -p "$RABBITMQ_MNESIA_BASE" || \
+        croak "Failed to make rabbitmq mnesia base dir '$RABBITMQ_MNESIA_BASE'"
+    chown $RABBITMQ_RUNASUSER $RABBITMQ_MNESIA_BASE
+    mkdir -p "$RABBITMQ_LOG_BASE" || \
+        croak "Failed to make rabbitmq log base dir '$RABBITMQ_LOG_BASE'"
+    chown $RABBITMQ_RUNASUSER $RABBITMQ_LOG_BASE
+    filemax=$( /sbin/sysctl -n fs.file-max )
+    if [[ $filemax -lt 65536 ]] ; then
+        /sbin/sysctl -w fs.file-max=65536
+        filemax=$( /sbin/sysctl -n fs.file-max )
+        [[ $filemax -lt 65536 ]] && \
+            croak "fs.file-max too low '$filemax'"
+    fi
+    userfilemax=$( ulimit -n )
+    if [[ $userfilemax -lt 65536 ]] ; then
+        ulimit -n 65536
+        userfilemax=$( ulimit -n )
+        [[ $userfilemax -lt 65536 ]] && \
+            croak "ulimit too low '$userfilemax'"
+    fi
+}
+
+
+function rmq_url_exists {
+    [[ -f "$PSYNCRMQURLFILE" ]] && \
+    grep -q BROKER_URL "$PSYNCRMQURLFILE" 
+}
+
+
+function save_rmq_url {
+    rmq_url="amqp://${PSYNCRMQUSER}:${PSYNCRMQPASS}@${RMQ_BIND_IP}:${RMQPORT}/${PSYNCRMQVHOST}/"
+    rmq_url_exists && croak "Rabbitmq url already exists in $PSYNCRMQURLFILE"
+    sed -i.~ -e "\$aBROKER_URL = '$rmq_url'" "$PSYNCRMQURLFILE"
+}
+
+
+function rm_rmq_url {
+    sed -i.~ -e '/BROKER_URL = /d' "$PSYNCRMQURLFILE"
+}
+
+
+function save_broker_url {
+    [[ "x$PSYNCBROKERTYPE" == "xrmq" ]] && \
+        ln -s "$PSYNCRMQURLFILE" "$PSYNCBROKERURLFILE"
+}
+
+
+function rm_broker_url {
+    [[ "x$PSYNCBROKERTYPE" == "xrmq" ]] && \
+        rm "$PSYNCBROKERURLFILE"
+}
+
+
+COMMANDS=( start stop status cmd )
+function usage {
+    echo "Usage: $PRG <command>"
+    echo "    where <command> is one of:"
+    echo "    ${COMMANDS[@]}"
+}
+
+
+find_erl
+# Change HOME to a writeable directory
+HOME="$PSYNCVARDIR/$PRG"
+case "$1" in
+    start)
+            get_bind_ip
+            do_setup
+            find_erl
+            save_rmq_url || croak "Unable to save rmq url to file"
+            save_broker_url || croak "Unable to save broker url to file"
+            $RMQSERVER -detached
+        ;;
+    stop)
+            $RMQCTL stop
+            echo "Cleaning up psync url files and symlinks ..."
+            rm_rmq_url
+            rm_broker_url
+        ;;
+    status)
+            $RMQCTL status
+        ;;
+    rotate|logrotate)
+            shift
+            $RMQCTL rotate_logs $*
+        ;;
+    list_queues|lq)
+            $RMQCTL list_queues name messages messages_ready messages_unacknowledged
+        ;;
+    cmd) 
+            # Run a rabbitmqctl command directly
+            shift
+            $RMQCTL $*
+        ;;
+    clean)
+            # After a failed start, there may be cruft to clean up.  This option is
+            # undocumented to prevent breaking things that are running.  It is for
+            # debugging, mainly. Use it carefully.
+            rm_rmq_url
+            rm_broker_url
+        ;;
+    *)
+        usage
+        ;;
+esac

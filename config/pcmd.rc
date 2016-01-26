@@ -1,0 +1,10 @@
+# These are useful for pcmd nodelists (WCOLL has historical significance to pdsh)
+PSYNCBASEDIR=~aloftus/psync
+export WCOLLREDIS=${PSYNCBASEDIR}/hostlist_redis
+export WCOLLRMQ=${PSYNCBASEDIR}/hostlist_rmq
+export WCOLL=${PSYNCBASEDIR}/hostlist_workers
+export WCOLLaa=${PSYNCBASEDIR}/hostlist_aa
+export WCOLLab=${PSYNCBASEDIR}/hostlist_ab
+export WCOLLac=${PSYNCBASEDIR}/hostlist_ac
+export WCOLLad=${PSYNCBASEDIR}/hostlist_ad
+export WCOLLae=${PSYNCBASEDIR}/hostlist_ae

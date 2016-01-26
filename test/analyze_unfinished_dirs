@@ -1,0 +1,54 @@
+#!/bin/env bash
+
+function croak {
+    echo -- "ERROR " $* 1>&2
+    exit 99
+}
+
+function ls_unfinished_dirs {
+    fgrep ' 999999 ' "$infile"
+}
+
+function print_headers {
+    head -2 "$infile" | tail -1
+}
+
+function print_help {
+    echo <<ENDHELP
+Usage: $0 [options] <file.syncdir_data>
+Options:
+    -h    Print this help, and exit.
+    -d    Sort by dir count
+    -f    Sort by file count
+    -l    Sort by symlink count
+    -t    Sort by total count (default)
+ENDHELP
+    exit 0
+}
+
+[[ $# -ne 1 ]] && croak "missing input file"
+infile="$1"
+
+
+sortcol=5
+while getopts ":hdflt" opt; do
+    case $opt in
+    h)  print_help ;;
+    d)  sortcol=2 ;;
+    f)  sortcol=3 ;;
+    l)  sortcol=4 ;;
+    t)  sortcol=5 ;;
+#    d)  echo "-a was triggered, Parameter: $OPTARG" >&2
+#        ;;
+    \?) echo "Invalid option: -$OPTARG" >&2
+        exit 1
+        ;;
+    :) echo "Option -$OPTARG requires an argument." >&2
+        exit 1
+        ;;
+  esac
+done
+shift $((OPTIND-1))
+
+ls_unfinished_dirs \
+| sort -n -k $sortcol
