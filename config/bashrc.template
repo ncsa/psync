@@ -79,7 +79,7 @@ export PSYNCBROKERTYPE=rmq
 # RabbitMQ specific
 #
 
-# Set a random username, password, and vhost for RMQ
+# Set a random username and password for RMQ
 export PSYNCRMQUSER=some_random_string
 export PSYNCRMQPASS=another_random_string
 export PSYNCRMQVHOST=PSYNCVHOST
