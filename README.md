@@ -18,29 +18,32 @@ parallelization.
 # Installation
 * Install rabbitmq
   * Must be accessible to the node that will run the rabbitmq service.  While
-    this may seem obvious, a useful setup is to install rabbitmq to a location
-    on a shared filesystem, which will allow any node to run the rabbitmq
-    service.
-  * Contrariwise, if a machine will be dedicated to always run the rabbitmq
-    service, the software can be installed local to that machine.
+    this may seem obvious, take note that the rabbitmq service does not
+    required a dedicated host, it can run from any node. A useful setup is to
+    install rabbitmq to a location on a shared filesystem, which will allow any 
+    node to run the rabbitmq service.
 * Install redis
   * Same as for rabbitmq, installing to a shared filesystem will allow any node 
     to run the redis service, or a dedicated machine can have it installed locally.
-* Setup python virtual env
+* Install Python virtualenv
   * `pip install virtualenv`
-  * `cd my_project_folder`
-    * Note: psync should be installed where it is accessible to all worker
-      nodes (such as on a shared filesystem).
-    * Note: The location is not required to be in any given python path (this
-      will be addresed in the psync config file later)
-  * `virtualenv venv`
-  * `source venv/bin/activate`
+* Choose install location.
+  * Note: psync should be installed where it will be accessible to all worker
+    nodes (such as on a shared filesystem).
+  * Note: The location is not required to be in any pre-determined python
+    accessible place (this will be addressed in the psync config).
+  * This example assumes `$HOME` is sufficient (where the current user is a 
+    regular user account, not root)
+  * `cd ~` 
 * Get pylut (required for psync)
   * `git clone https://github.com/ncsa/pylut.git`
 * Get psync
   * `git clone https://github.com/ncsa/psync.git`
-* Install the additional python required libraries
+* Create a virtualenv for psync
   * `cd psync`
+  * `virtualenv venv`
+  * `source venv/bin/activate`
+* Install the additional python required libraries
   * `pip install -r requirements.txt`
 * Edit the config file for your environment
   * `cp config/bashrc.template config/bashrc`
