@@ -5,23 +5,46 @@
 ###
 ### Variables used by other psync startup scripts
 ###
+
+#
+# PYLUT specific settings
+#
+
 # PYLUTBASEDIR - if pylut lib is in ~user/pylut/pylut.py
 #                 then PYLUTBASEDIR=~user/pylut
 export PYLUTBASEDIR=~user/pylut
+
+# PYLUTRSYNCPATH - path to rsync (must be set for pylut library)
+export PYLUTRSYNCPATH=/usr/bin/rsync
+
+# PYLUTLFSPATH - path to lfs (must be set for pylut library)
+export PYLUTLFSPATH=/sw/user/scripts/lfs
+
+# PYLUTRSYNCMAXSIZE - max filesize in bytes that will be copied using rsync
+#                     files larger that this will be copied using dd
+export PYLUTRSYNCMAXSIZE=536870912
+
+#
+# PSYNC specific settings
+#
 
 # PSYNCBASEDIR - if psync is in ~user/psync/lib/psync.py
 #             then PSYNCBASEDIR=~user/psync
 export PSYNCBASEDIR=~user/psync
 
 # Python Venv where celery, cbor, redis, rmq are installed
-export PSYNCVENVDIR=/path/to/python/virtualenv/dir
+export PSYNCVENVDIR=$PSYNCBASEDIR/venv
 
 # Path where redis and rmq servers write their data and log files
 # Using a shared filesystem allows easy access to log files
-export PSYNCVARDIR=/path/to/write/redis/and/rmq/data
+# the filesystem supports(ie: Lustre set stripecount)
+export PSYNCVARDIR=$PSYNCBASEDIR/var
 
 # Path where psync/bin/get_psync_logs.sh will write log files
-export PSYNCLOGDIR=/path/to/common/log/dir
+# Note: log files can get very large (50-100GB).  It may be good practice to
+# pre-create the log directory with any optimizations the filesystem supports
+# (ie: Lustre stripecount)
+export PSYNCLOGDIR=$PSYNCBASEDIR/var/log
 
 # PSYNCSOFTTIMEOUT
 # PSYNCHARDTIMEOUT
@@ -53,49 +76,34 @@ export PSYNCINETPREFIX="10.128/14"
 export PSYNCBROKERTYPE=rmq
 
 #
-# Redis specific
-#
-# PSYNCREDISURLFILE -> probably don't need to touch this
-export PSYNCREDISURLFILE="${PSYNCBASEDIR}/config/redis_celery_conf.py"
-
-#
 # RabbitMQ specific
 #
-# PSYNCRMQURLFILE -> probably don't need to touch this
-export PSYNCRMQURLFILE="${PSYNCBASEDIR}/config/rmq_celery_conf.py"
 
 # Set a random username, password, and vhost for RMQ
-export PSYNCRMQUSER=USERNAME
-export PSYNCRMQPASS=PASSWORD
+export PSYNCRMQUSER=some_random_string
+export PSYNCRMQPASS=another_random_string
 export PSYNCRMQVHOST=PSYNCVHOST
 
-# RABBITMQ_HOME - path to 'rmq' executable
-export RABBITMQ_HOME=/path/to/rmq
+# RABBITMQ_HOME - path to rabbitmq install directory
+export RABBITMQ_HOME=/path/to/rabbitmq_server-3.5.6
 
 # a valid user to run rmq service as
-export RABBITMQ_RUNASUSER=aloftus
+export RABBITMQ_RUNASUSER=username
 
 # path to 'erl' executable
-export PATHTOERL=/path/to/bin/erl
+export PATHTOERL=/path/to/lib/erlang/bin/erl
 
-# PSYNCBROKERURLFILE -> probably don't need to touch this
+
+#######################################
+###                                 ###
+### END OF USER CONFIGURED SETTINGS ###
+###                                 ###
+#######################################
+
 export PSYNCBROKERURLFILE="${PSYNCBASEDIR}/config/broker_url.py"
 
+export PSYNCRMQURLFILE="${PSYNCBASEDIR}/config/rmq_celery_conf.py"
 
-###
-### Python specific settings
-###
+export PSYNCREDISURLFILE="${PSYNCBASEDIR}/config/redis_celery_conf.py"
 
-# PYLUTRSYNCPATH - path to rsync (must be set for pylut library)
-export PYLUTRSYNCPATH=/usr/bin/rsync
-
-# PYLUTLFSPATH - path to lfs (must be set for pylut library)
-export PYLUTLFSPATH=/sw/user/scripts/lfs
-
-# PYLUTRSYNCMAXSIZE - max filesize in bytes for rsync native copy
-#                     files larger that this will be copied using something
-#                     more efficient (currently dd)
-export PYLUTRSYNCMAXSIZE=536870912
-
-# PYTHONPATH -> probably don't need to touch this
 export PYTHONPATH=${PSYNCBASEDIR}/lib:${PSYNCBASEDIR}/config:${PYLUTBASEDIR}
