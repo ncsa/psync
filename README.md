@@ -33,33 +33,38 @@ parallelization.
   * Note: The location is not required to be in any pre-determined python
     accessible place (this will be addressed in the psync config).
   * This example assumes `$HOME` is sufficient (where the current user is a 
-    regular user account, not root)
-  * `cd ~` 
+    regular user, **not root**)
+  * `cd ~`  *non-root*
 * Get pylut (required for psync)
-  * `git clone https://github.com/ncsa/pylut.git`
+  * `git clone https://github.com/ncsa/pylut.git` *non-root*
 * Get psync
-  * `git clone https://github.com/ncsa/psync.git`
+  * `git clone https://github.com/ncsa/psync.git` *non-root*
 * Create a virtualenv for psync
-  * `cd psync`
-  * `virtualenv venv`
-  * `source venv/bin/activate`
+  * `cd psync` *non-root*
+  * `virtualenv venv` *non-root*
+  * `source venv/bin/activate` *non-root*
 * Install the additional python required libraries
-  * `pip install -r requirements.txt`
+  * `pip install -r requirements.txt` *non-root*
 * Edit the config file for your environment
-  * `cp config/bashrc.template config/bashrc`
-  * `vim config/bashrc`
+  * `cp config/bashrc.template config/bashrc` *non-root*
+  * `vim config/bashrc` *non-root*
+* Set root permissions on psync config (necessary when celery is run as root)
+  * `chown root:root config/psync_service.config`
+  * `chmod 400 config/psync_service.config`
 
 # Running Psync
 There are three major parts of psync that each need to be running before
 starting a sync:
+
 1. Message Broker (implements a task queue)
 2. Logging Service (centralized logging)
 3. Worker Nodes (retrieve tasks from the task queue and execute them)
+
 Each of these services can run on different systems or the same system or any
-combination there of.  
+combination thereof.  
 The only requirements are that all nodes share a common network and that all
-worker nodes mount the necessary filesystems (ie: source, target, and anything
-else configured in the bashrc config file).
+worker nodes mount the necessary filesystems (ie: source, target, and any other
+paths configured in the bashrc config file).
 The rest of this readme will assume that each service will run on a separate node.
 It is also assumed that psync is running on a cluster.
 
