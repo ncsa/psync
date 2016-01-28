@@ -6,11 +6,11 @@ configfile="${BASH_SOURCE%/*}/../config/bashrc"
 source "$configfile"
 
 # These are useful for pcmd nodelists (WCOLL has historical significance to pdsh)
-export WCOLLREDIS=${PSYNCBASEDIR}/hostlist_redis
-export WCOLLRMQ=${PSYNCBASEDIR}/hostlist_rmq
-export WCOLL=${PSYNCBASEDIR}/hostlist_workers
-export WCOLLaa=${PSYNCBASEDIR}/hostlist_aa
-export WCOLLab=${PSYNCBASEDIR}/hostlist_ab
-export WCOLLac=${PSYNCBASEDIR}/hostlist_ac
-export WCOLLad=${PSYNCBASEDIR}/hostlist_ad
-export WCOLLae=${PSYNCBASEDIR}/hostlist_ae
+export WCOLLREDIS=${PSYNCBASEDIR}/sample/hostlist_redis
+export WCOLLRMQ=${PSYNCBASEDIR}/sample/hostlist_rmq
+export WCOLL=${PSYNCBASEDIR}/sample/hostlist_workers
+export WCOLLaa=${PSYNCBASEDIR}/sample/hostlist_aa
+export WCOLLab=${PSYNCBASEDIR}/sample/hostlist_ab
+export WCOLLac=${PSYNCBASEDIR}/sample/hostlist_ac
+export WCOLLad=${PSYNCBASEDIR}/sample/hostlist_ad
+export WCOLLae=${PSYNCBASEDIR}/sample/hostlist_ae
