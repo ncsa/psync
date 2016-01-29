@@ -48,12 +48,20 @@ while getopts ":hi:[iterations]p:[pause]" val; do
 done
 shift $((OPTIND-1))
 
-if [[ $# -ne 1 ]]; then
+[[ $# -ne 1 ]] && {
   echo
   echo ERROR Missing logfile_prefix >&2
   exit 1
-fi
+}
 logfile_pfx="$1"
+
+# Check for writeable log directory
+[[ -d "$PSYNCLOGDIR" ]] || mkdir "$PSYNCLOGDIR"
+[[ -w "$PSYNCLOGDIR" ]] || {
+    echo
+    echo "ERROR Cant write to logdir '$PSYNCLOGDIR'"
+    exit 1
+}
 
 
 for i in $(seq $max_iterations); do
