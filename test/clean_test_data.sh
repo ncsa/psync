@@ -28,18 +28,25 @@ done
 
 # Iterate over all date-subdirs in tgtbase
 for newbase in $( find "$tgtbase" -mindepth 1 -maxdepth 1 ); do
-    # Delete PSYNCTMPDIR's
-    deldir="${newbase}/$( basename $tmpdir )"
-    set -x
-    time parallel_del_dir "$deldir" 1
-    set +x
-    # Delete other sources
-    for s in "${srcdirlist[@]}"; do
+    # Delete sources
+    for s in $( find $newbase -mindepth 1 -maxdepth 1 -type d ); do
         src=$( basename $s )
         deldir="${newbase}/$src"
+        if [[ -d "$deldir" ]] ; then
+            set -x
+            time parallel_del_dir "$deldir" 1
+            set +x
+        fi
+    done
+
+    # Delete PSYNCTMPDIR
+    deldir="${newbase}/$( basename $tmpdir )"
+    if [[ -d "$deldir" ]] ; then
         set -x
         time parallel_del_dir "$deldir" 1
         set +x
+    fi
+
     # Delete top dir
     time find "$newbase" -delete
 
