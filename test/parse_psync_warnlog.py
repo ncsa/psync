@@ -19,6 +19,7 @@ class PsyncWarning( object ):
     re_errtypes = re.compile( 'LustreStripeInfoError'
                           '|' 'Checksum mismatch'
                           '|' 'No such file or directory'
+                          '|' 'Setstripe failed'
                           )
     detail_keys = ( 'synctype', 'msgtype', 'action', 'error', 'src', )
 
@@ -30,17 +31,17 @@ class PsyncWarning( object ):
             setattr( self, k, dict_record[ k ] )
             self.keys.append( k )
         self.parse_errtype()
-        if not self.errtype:
+        if not hasattr( self, 'errtype' ):
             print( "NO ERRTYPE FOUND FOR ..." )
             pprint.pprint( dict_record )
             raise SystemExit()
 
     def parse_errtype( self ):
-        if self.error:
+        if hasattr( self, 'error' ):
             m = self.re_errtypes.search( self.error )
             if m:
                 self.errtype = m.group()
-        else:
+        elif hasattr( self, 'action' ):
             self.errtype = self.msgtype + ' ' + self.action
 
     def __str__( self ):
