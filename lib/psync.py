@@ -25,6 +25,9 @@ redisconf = __import__( redisconf_name )
 # TODO Get log queue_name from config file (or cmdline?)
 logr = redis_logger.Redis_Logger( url=redisconf.BROKER_URL, queue_name='psync_log' )
 
+# TODO - remove rsyncpath after moving symlink_sync to external library
+rsyncpath = os.environ[ 'PYLUTRSYNCPATH' ]
+
 localhostname = os.uname()[1]
 
 
@@ -293,6 +296,10 @@ def symlink_sync( src, tgt, rsyncopts ):
     :return: None
     Note: The target of the symlink is copied as is, no changes are made to it.
     """
+    # TODO - move symlink sync to a function in the pylut module.
+    #        This will allow future enhancements to use a module other than 
+    #        pylut without breaking psync.
+
     #resolve symlink
     sym_tgt_orig = os.readlink( src.absname )
     sym_tgt_new = sym_tgt_orig
@@ -323,7 +330,7 @@ def symlink_sync( src, tgt, rsyncopts ):
             # tgt exists but is not a symlink, remove it so we can make a symlink
             os.unlink( str( tgt ) )
     if do_symlink:
-        cmd = [ pylut.rsyncpath ]
+        cmd = [ rsyncpath ]
         opts = None
         args = [ '-X', '-A', '--super', '-l' ]
         if 'synctimes' in rsyncopts:
