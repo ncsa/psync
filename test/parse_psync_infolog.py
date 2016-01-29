@@ -14,24 +14,13 @@ logr = logging.getLogger( __name__ )
 def process_cmdline():
     parser = argparse.ArgumentParser()
     parser.add_argument( 'infile' )
-#    parser.add_argument( '--head', '-H', type=int, metavar='N',
-#        help='only print N records from the beginning of the file' )
-#    parser.add_argument( '--tail', '-T', type=int, metavar='N',
-#        help='only print N records from the end of the file' )
-#    parser.add_argument( '--ini', action='store_true',
-#        help='format output in INI style' )
-#    parser.add_argument( '--raw', '-r', action='store_true',
-#        help='output raw cbor data '
-#             '(requires --outfile) '
-#             '(combine with -H to obtain a small sample of a cbor file)' )
-#    parser.add_argument( '--outfile', '-o',
-#        help='write output to OUTFILE ' )
-#    default_options = {
-#        'tail': 0,
-#        'head': 0,
-#        'outfile': None,
-#    }
-#    parser.set_defaults( **default_options )
+    parser.add_argument( '--inodes', '-i', type=int, metavar='N',
+        help='Source file system has N inodes total. '
+             'Used to estimate completion progress.' )
+    default_options = {
+        'inodes': 120000000,
+    }
+    parser.set_defaults( **default_options )
     args = parser.parse_args()
     return args
 
@@ -103,7 +92,7 @@ def process_syncdir_stats( rec, syncdir_data ):
             msgtype, rec ) )
 
 
-def print_psync_summary( time_data, sync_types, total_rec_count ):
+def print_psync_summary( args, time_data, sync_types, total_rec_count ):
     start_time = datetime.datetime.fromtimestamp( time_data[ 'start_ts' ] )
     end_time = datetime.datetime.fromtimestamp( time_data[ 'end_ts' ] )
     elapsed = end_time - start_time
@@ -111,7 +100,7 @@ def print_psync_summary( time_data, sync_types, total_rec_count ):
     for k,v in sync_types.iteritems():
         if 'end' in v:
             total_inodes += v[ 'end' ]
-    pct_complete_by_inodes = total_inodes / 120000000.0 * 100
+    pct_complete_by_inodes = total_inodes / args.inodes * 100.0
     pct_rate = pct_complete_by_inodes / elapsed.total_seconds() * 3600
     print( 
         'Record counts: {rc}\n'
@@ -195,7 +184,7 @@ def run( args ):
         except ( EOFError ) as e:
             pass
     print_syncdir_summary( args, syncdir_data )
-    print_psync_summary( time_data, sync_types, total_records )
+    print_psync_summary( args, time_data, sync_types, total_records )
 
 
 if __name__ == '__main__':
