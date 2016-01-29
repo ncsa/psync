@@ -30,19 +30,27 @@ class PsyncWarning( object ):
         for k in dict_record:
             setattr( self, k, dict_record[ k ] )
             self.keys.append( k )
-        self.parse_errtype()
-        if not hasattr( self, 'errtype' ):
+        errtype = self.parse_errtype( dict_record )
+        if not errtype:
             print( "NO ERRTYPE FOUND FOR ..." )
             pprint.pprint( dict_record )
             raise SystemExit()
+        self.errtype = errtype
 
-    def parse_errtype( self ):
-        if hasattr( self, 'error' ):
-            m = self.re_errtypes.search( self.error )
+    def parse_errtype( self, dict_record ):
+        errtype = None
+        if 'error' in dict_record:
+            try:
+                m = self.re_errtypes.search( dict_record[ 'error' ] )
+            except ( TypeError ) as e:
+                print( "caught TypeError" )
+                pprint.pprint( dict_record )
+                raise SystemExit()
             if m:
-                self.errtype = m.group()
-        elif hasattr( self, 'action' ):
-            self.errtype = self.msgtype + ' ' + self.action
+                errtype = m.group()
+        elif 'action' in dict_record:
+            errtype = self.msgtype + ' ' + self.action
+        return errtype
 
     def __str__( self ):
         return '<{cl} ({mt}) ({st}) ({et}) ({e})>'.format( 
