@@ -10,10 +10,24 @@ parallelization.
 * [ Redis 3.0.6 ] ( http://redis.io/ )
 * [ RabbitMQ ] ( http://www.rabbitmq.com/ )
 * [ Python Virtual Env ] ( http://docs.python-guide.org/en/latest/dev/virtualenvs/ )
+* [ pylut ] ( https://github.com/ncsa/pylut ) (See note #2)
 * (Additional requirements are all python libraries and will be installed below)
 
 # Notes
-* All commands are assumed to be run as root unless otherwise specified.
+1. All commands in this readme are assumed to be run as root unless otherwise 
+specified.
+2.  This version depends on [ pylut ] ( https://github.com/ncsa/pylut ), thus it
+is specific to Lustre.  Psync can be made more generic by replacing the
+dependency on Pylut with any other library that provides generic file copy
+operations.  It should be possible to dynamically check the filesystem type of
+both source and target and load the appropriate module.  As such, the Pylut
+module should only be loaded if both source and target are of type Lustre.
+Otherwise, a generic (non-Lustre-stripe-aware) copy module would be loaded.
+Also, additional modules could be written that are specific to other filesystem
+types (to take advantage of filesystem specific optimizations) and thus these
+could be loaded if the source and target filesystems are both of the specific
+type.
+
 
 # Installation
 * Install rabbitmq
@@ -139,44 +153,52 @@ A psync is finished when all of the following are true:
   * `/path/to/psync/test/rename_log_files.sh /path/to/log_file.INFO`
 
 # Sample Setup
-In the `sample` directory, there are some files that may help with an initial
-setup.  The sample cluster 102 compute nodes and a login node.  From the login node,
+In the `sample` directory, there are some files that may understand the
+workflow.  On a large cluster, 102 nodes were reserved for file migration (one
+for rmq, one for redis, and 100 for workers).  From the login node,
 the root user can ssh to any cluster in the node and can also use the `pcmd`
-command to run remote commands on any node (or nodes) in the cluster.  Assume
-also that all the setup has already been completed and all programs are
-installed on a shared filesystem accessible to the compute nodes and login
-node.
+command to run remote commands on any node (or nodes) in the cluster.
+Rabbitmq, redis, pylut, and psync (and dependencies) have all been installed to
+user **aloftus**'s home directory on a shared filesystem mounted cluster-wide.
+In the `sample` directory, the `hostlist` files contain lists of nodes and
+the `pcmd.rc` file maps environment variable names to filenames for use by the
+`pcmd` command.
+
 A sample run might look something like this:
 * Login to the login node as root.
 * `source ~aloftus/psync/config/bashrc`
 * `source $PSYNCBASEDIR/sample/pcmd.rc`
 * Start rabbitmq
-  * `pcmd -f $WCOLLRMQ '$PSYNCBASEDIR/bin/rabbitmq_psync start'`
+  * `pcmd -f $WCOLLRMQ "$PSYNCBASEDIR/bin/rabbitmq_psync start"`
+  * First time only
+    * `pcmd -f $WCOLLRMQ "$PSYNCBASEDIR/bin/rabbitmq_user_setup"`
 * Start redis
-  * `pcmd -f $WCOLLREDIS '$PSYNCBASEDIR/bin/redis_psync start'`
+  * `pcmd -f $WCOLLREDIS "$PSYNCBASEDIR/bin/redis_psync start"`
 * Start workers
-  * `pcmd -f $WCOLL '$PSYNCBASEDIR/bin/psyncd start'`
+  * `pcmd -f $WCOLL "$PSYNCBASEDIR/bin/psyncd start"`
 * Check that all workers started
-  * `pcmd -f $WCOLLREDIS '$PSYNCBASEDIR/bin/workers_status`
-* Limit the number of processes per worker to 4
-  * `pcmd -f $WCOLLREDIS '$PSYNCBASEDIR/bin/set_pool_size -s 4`
-* Check that all workers now have only 4 processes each
-  * `pcmd -f $WCOLLREDIS '$PSYNCBASEDIR/bin/workers_status`
+  * `pcmd -f $WCOLLREDIS "$PSYNCBASEDIR/bin/workers_status"`
+* (Optional) Limit the number of processes per worker
+  * `pcmd -f $WCOLLREDIS "$PSYNCBASEDIR/bin/set_pool_size -s 4"`
+  * Check that all workers now have only 4 processes each
+    * `pcmd -f $WCOLLREDIS "$PSYNCBASEDIR/bin/workers_status"`
 * Start a sync
-  * `pcmd -f $WCOLLREDIS '$PSYNCBASEDIR/bin/start_psync -tpog -m 3600 /mnt/a
-    /mnt/b/a.copy'`
-* Collect logs
-  * `watch -n 60 "pcmd -f $WCOLLREDIS '$PSYNCBASEDIR/bin/get_psync_logs.sh -i
-    1' $PSYNCLOGDIR/psync_mnt_a"`
-  OR
-  * `ssh $WCOLLREDIS '$PSYNCBASEDIR/bin/get_psync_logs.sh -i 100 -p 60
-    $PSYNCLOGDIR/psync_mnt_a'`
-* Monitor progress
-  * `cd $PSYNCLOGDIR`
-  * `$PSYNCBASEDIR/test/progress_report.sh`
+  * `pcmd -f $WCOLLREDIS "$PSYNCBASEDIR/bin/start_psync -tpog -m 3600 /mnt/a
+    /mnt/b/a.working"`
+* Collect logs and monitor progress
+  * Repeat until all workers are idle AND no more logs
+  * Collect logs
+    * `watch -n 60 "pcmd -f $WCOLLREDIS '$PSYNCBASEDIR/bin/get_psync_logs.sh -i
+    1 $PSYNCLOGDIR/psync_mnt_a' "`
+    * __OR__
+    * `ssh $WCOLLREDIS "$PSYNCBASEDIR/bin/get_psync_logs.sh -i 100 -p 60
+    $PSYNCLOGDIR/psync_mnt_a"`
+  * Monitor progress
+    * `cd $PSYNCLOGDIR`
+    * `$PSYNCBASEDIR/test/progress_report.sh`
 * Shutdown all services
-  * `pcmd -f $WCOLLREDIS '$PSYNCBASEDIR/bin/workers_shutdown`
-  * `pcmd -f $WCOLLREDIS '$PSYNCBASEDIR/bin/redis_psync stop'`
-  * `pcmd -f $WCOLLRMQ '$PSYNCBASEDIR/bin/rabbitmq_psync stop'`
+  * `pcmd -f $WCOLLREDIS "$PSYNCBASEDIR/bin/workers_shutdown"`
+  * `pcmd -f $WCOLLREDIS "$PSYNCBASEDIR/bin/redis_psync stop"`
+  * `pcmd -f $WCOLLRMQ "$PSYNCBASEDIR/bin/rabbitmq_psync stop"`
 * Rename log files for this run
   * `$PSYNCBASEDIR/test/rename_log_files.sh $PSYNCLOGDIR/psync_mnt_a.INFO`
