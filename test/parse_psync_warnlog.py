@@ -20,6 +20,7 @@ class PsyncWarning( object ):
                           '|' 'Checksum mismatch'
                           '|' 'No such file or directory'
                           '|' 'Setstripe failed'
+                          '|' 'file has vanished'
                           )
     detail_keys = ( 'synctype', 'msgtype', 'action', 'error', 'src', )
 
