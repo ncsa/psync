@@ -100,7 +100,7 @@ def print_psync_summary( args, time_data, sync_types, total_rec_count ):
     for k,v in sync_types.iteritems():
         if 'end' in v:
             total_inodes += v[ 'end' ]
-    pct_complete_by_inodes = total_inodes / args.inodes * 100.0
+    pct_complete_by_inodes = total_inodes * 100.0 / args.inodes
     pct_rate = pct_complete_by_inodes / elapsed.total_seconds() * 3600
     print( 
         'Record counts: {rc}\n'
@@ -110,7 +110,7 @@ def print_psync_summary( args, time_data, sync_types, total_rec_count ):
         'End time: {et_ts} ({et})\n'
         'Elapsed Time: {el}\n'
         'Percent Complete: {pct_c:4.2f}\n'
-        'Percent rate (per Hour): {pct_h:4.2f}\n'.format( 
+        'Percent rate (per Hour): {pct_ph:4.2f}\n'.format( 
         rc = pprint.pformat( sync_types ),
         tlrc = total_rec_count,
         icnt = total_inodes,
@@ -120,7 +120,7 @@ def print_psync_summary( args, time_data, sync_types, total_rec_count ):
         et = str( end_time ),
         el = str( elapsed ),
         pct_c = pct_complete_by_inodes,
-        pct_h = pct_rate ) )
+        pct_ph = pct_rate ) )
 
 
 def print_syncdir_summary( args, syncdir_data ):
