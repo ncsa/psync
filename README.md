@@ -126,6 +126,7 @@ It is also assumed that psync is running on a cluster.
 
 ## Determining When A Psync Has Finished
 A psync is finished when all of the following are true:
+
 1. `workers_status -i` shows no more tasks are running
 2. `get_psync_logs.sh` returns 0 logs for multiple iterations.
 
