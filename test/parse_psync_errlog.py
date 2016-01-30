@@ -18,7 +18,7 @@ err_type_re_signature = {
     "<type 'exceptions.OSError'>": re.compile( '([^:]+):?' ),
     "<type 'exceptions.IOError'>": re.compile( '([^:]+):?' ),
     "<class 'runcmd.Run_Cmd_Error'>": 
-        re.compile( '<Run_Cmd_Error \((code=.+msg=[^:]+).*:(.+)\n' ),
+        re.compile( '<Run_Cmd_Error \((code=.+msg=[^:/]+).*:(.+)\n' ),
     "<class 'billiard.exceptions.SoftTimeLimitExceeded'>": re.compile( '(.*)' ),
 }
 
