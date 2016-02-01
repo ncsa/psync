@@ -25,10 +25,10 @@ err_type_re_signature = {
 
 # Traceback lines to skip in error signature
 re_traceback_ignore = re.compile( 
-  '/(subprocess|os|genericpath|posixpath).py", ' +
-  '|' + 'logging/__init__.py", ' +
-  '|' + 'billiard/pool.py", ' +
-  '|' + 'celery/app/(task|trace).py", ' )
+  '/(subprocess|os|genericpath|posixpath).py", '
+  '|' 'logging/__init__.py", '
+  '|' 'billiard/pool.py", '
+  '|' 'celery/app/(task|trace).py", ' )
 
 
 def process_cmdline():
@@ -68,7 +68,7 @@ def process_cmdline():
     }
     parser.set_defaults( **default_options )
     args = parser.parse_args()
-    if args.message or args.details:
+    if args.message or args.details or args.raw:
         args.anydetails = True
     return args
 
@@ -126,11 +126,6 @@ def print_single_error( num, sig, data, args ):
     print( 'Error # {0:02d}  Qty:{1}'.format( num, qty ) )
     print( '='*22 )
     print( sig )
-    if args.raw:
-        print( '-'*50 )
-        rec = data[ 'instances' ][ 0 ]
-        for k in [ 'exception_type', 'exception', 'args', 'traceback' ]:
-            print( '{k}: {v}'.format( k=k, v=rec[ k ] ) )
     if args.anydetails:
         for i in data[ 'instances' ]:
             print( '-'*50 )
@@ -139,6 +134,8 @@ def print_single_error( num, sig, data, args ):
             if args.details:
                 for k in [ 'args' ]:
                     print( '{k}: {v}'.format( k=k, v=i[ k ] ) )
+            if args.raw:
+                pprint.pprint( i )
 
 def print_errors( errdict, args ):
     err_indices = { i: e for i, e in enumerate( errdict, start=1) }
