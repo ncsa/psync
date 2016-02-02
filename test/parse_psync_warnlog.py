@@ -21,6 +21,10 @@ class PsyncWarning( object ):
                           '|' 'No such file or directory'
                           '|' 'Setstripe failed'
                           '|' 'file has vanished'
+                          '|' 'get_xattr_data'
+                          '|' 'Cannot send after transport endpoint shutdown'
+                          '|' 'No such device'
+                          '|' 'Input/output error'
                           )
     detail_keys = ( 'synctype', 'msgtype', 'action', 'error', 'src', )
 
@@ -94,6 +98,9 @@ class PsyncWarning( object ):
                            self.error ] )
         return output.getvalue()
 
+    def message( self ):
+        return pprint.pformat( dict( src=self.src ) )
+
     def details( self ):
         return pprint.pformat( { k: getattr( self, k ) for k in self.detail_keys } )
 #        d = {}
@@ -116,8 +123,8 @@ def process_cmdline():
     picklegroup.add_argument( '--pickle', '-p', action='store_true', dest='pickleout',
         help='Save pickled data in INFILE.pickle, clobbering an existing file' )
     outputgroup = parser.add_argument_group( title='Output Details' )
-#    outputgroup.add_argument( '--message', '-m', action='store_true',
-#        help="Show one-line message for each instance of error type" )
+    outputgroup.add_argument( '--message', '-m', action='store_true',
+        help="Show one-line message for each instance of error type" )
     outputgroup.add_argument( '--details', '-d', action='store_true',
         help="Show details for each instance of error type" )
     outputgroup.add_argument( '--raw', '-r', action='store_true',
@@ -184,6 +191,10 @@ def print_single_warning( num, sig, data, args ):
     print( 'Warning # {0:02d}  Qty:{1}'.format( num, qty ) )
     print( '='*22 )
     print( sig )
+    if args.message:
+        print( '-'*50 )
+        for w in data:
+            print( w.message() )
     if args.details:
         print( '-'*50 )
         for w in data:
