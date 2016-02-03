@@ -48,6 +48,8 @@ def process_cmdline():
         help="Show details for each instance of error type" )
     outputgroup.add_argument( '--raw', '-r', action='store_true',
         help="Show raw exception for each error type." )
+    outputgroup.add_argument( '-a', '--attr', action='append', dest='attrlist',
+        help="Show specified attrs from each instance. Can be present multiple times." )
     parser.add_argument( '--anydetails', action='store_true', 
         help=argparse.SUPPRESS )
     limitgroup = parser.add_mutually_exclusive_group()
@@ -68,7 +70,7 @@ def process_cmdline():
     }
     parser.set_defaults( **default_options )
     args = parser.parse_args()
-    if args.message or args.details or args.raw:
+    if args.message or args.details or args.raw or args.attrlist:
         args.anydetails = True
     return args
 
@@ -129,6 +131,15 @@ def print_single_error( num, sig, data, args ):
     if args.anydetails:
         for i in data[ 'instances' ]:
             print( '-'*50 )
+            if args.attrlist:
+                outfmt = '{1}'
+                if len( args.attrlist ) > 1:
+                    outfmt = '{0} {1}'
+                for a in args.attrlist:
+                    val = 'None'
+                    if a in i:
+                        val = i[a]
+                    print( outfmt.format( a, val ) )
             if args.message:
                 print( i[ 'exception' ] )
             if args.details:
