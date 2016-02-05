@@ -111,6 +111,18 @@ class PsyncWarning( object ):
     def raw( self ):
         return pprint.pformat( { k: getattr( self, k ) for k in self.keys } )
 
+    def attrlist( self, attrlist):
+        lines = []
+        outfmt = '{1}'
+        if len( args.attrlist ) > 1:
+            outfmt = '{0} {1}'
+        for a in args.attrlist:
+            val = 'None'
+            if hasattr( self, a ):
+                val = getattr( self, a )
+            lines.append( outfmt.format( a, val ) )
+        return '\n'.join( lines )
+
 
 def process_cmdline():
     parser = argparse.ArgumentParser()
@@ -131,6 +143,8 @@ def process_cmdline():
         help="""Show raw exception for each error type.
             Note: Raw exception is stored only once, from the first instance of
             type, for space and time saving reasons.""" )
+    outputgroup.add_argument( '-a', '--attr', action='append', dest='attrlist',
+        help="Show specified attrs from each instance. Can be present multiple times." )
     parser.add_argument( '--anydetails', action='store_true', 
         help=argparse.SUPPRESS )
     limitgroup = parser.add_mutually_exclusive_group()
@@ -148,12 +162,12 @@ def process_cmdline():
         "message": False,
         "details": False,
         "raw": False,
-#        "anydetails": False,
+        "anydetails": False,
     }
     parser.set_defaults( **default_options )
     args = parser.parse_args()
-#    if args.message or args.details:
-#        args.anydetails = True
+    if args.message or args.details or args.raw or args.attrlist:
+        args.anydetails = True
     return args
 
 
@@ -191,18 +205,20 @@ def print_single_warning( num, sig, data, args ):
     print( 'Warning # {0:02d}  Qty:{1}'.format( num, qty ) )
     print( '='*22 )
     print( sig )
-    if args.message:
+    if args.anydetails:
         print( '-'*50 )
-        for w in data:
-            print( w.message() )
-    if args.details:
-        print( '-'*50 )
-        for w in data:
-            print( w.details() )
-    elif args.raw:
-        print( '-'*50 )
-        for w in data:
-            print( w.raw() )
+        if args.attrlist:
+            for w in data:
+                print( w.attrlist( args.attrlist ) )
+        if args.message:
+            for w in data:
+                print( w.message() )
+        if args.details:
+            for w in data:
+                print( w.details() )
+        elif args.raw:
+            for w in data:
+                print( w.raw() )
 
 
 def print_all( all_warnings, args ):
