@@ -9,8 +9,8 @@ source "$configfile"
 export WCOLLREDIS=${PSYNCBASEDIR}/sample/hostlist_redis
 export WCOLLRMQ=${PSYNCBASEDIR}/sample/hostlist_rmq
 export WCOLL=${PSYNCBASEDIR}/sample/hostlist_workers
-export WCOLLaa=${PSYNCBASEDIR}/sample/hostlist_aa
-export WCOLLab=${PSYNCBASEDIR}/sample/hostlist_ab
-export WCOLLac=${PSYNCBASEDIR}/sample/hostlist_ac
-export WCOLLad=${PSYNCBASEDIR}/sample/hostlist_ad
-export WCOLLae=${PSYNCBASEDIR}/sample/hostlist_ae
+#export WCOLLaa=${PSYNCBASEDIR}/sample/hostlist_aa
+#export WCOLLab=${PSYNCBASEDIR}/sample/hostlist_ab
+#export WCOLLac=${PSYNCBASEDIR}/sample/hostlist_ac
+#export WCOLLad=${PSYNCBASEDIR}/sample/hostlist_ad
+#export WCOLLae=${PSYNCBASEDIR}/sample/hostlist_ae
