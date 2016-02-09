@@ -8,9 +8,6 @@ import argparse
 import os
 import fsitem
 
-epoch = datetime.datetime( year=1970, month=1, day=1 )
-
-
 def process_cmdline():
     help_txt = """Note: TGT must already exist.
     After psync is done, the inside of TGT will look identical to the inside of SRC.
@@ -20,15 +17,6 @@ def process_cmdline():
     parser = argparse.ArgumentParser( epilog=help_txt )
     parser.add_argument( 'src_dir', metavar='SRC' )
     parser.add_argument( 'tgt_dir', metavar='TGT' )
-#    parser.add_argument( '--logbasename', '-l', metavar='BASENAME',
-#        help="""Basename for logfiles (default: %(default)s).
-#            Actual filenames created will be suffixed with current date/time
-#            and type of log message (ie: INFO, ERROR, WARNING, ...).
-#            Logfiles will be created in the directory specified by $PSYNCLOGDIR
-#            (environment variable) except when BASENAME is an absolute path, in which
-#            case $PSYNCLOGDIR will be ignored.
-#        """
-#        )
     pgroup = parser.add_argument_group( title='Psync options',
         description='Options to adjust psync behavior.')
     pgroup.add_argument( '--minsecs', '-m', type=int,
@@ -59,7 +47,6 @@ def process_cmdline():
         help='Sync file mtime (default: %(default)s).'
         )
     default_options = {
-#        'logbasename': 'psync',
         'syncowner': False,
         'syncgroup': False,
         'syncperms': False,
@@ -70,25 +57,6 @@ def process_cmdline():
     }
     parser.set_defaults( **default_options )
     args = parser.parse_args()
-#    # check for logdir
-#    logdir = os.environ.get( 'PSYNCLOGDIR' )
-#    logbase = ''
-#    if args.logbasename.startswith( os.sep ):
-#        logbase = args.logbasename
-#    elif logdir is None:
-#        raise UserWarning( """Don't know where to write logs.  
-#            Must either set PSYNCLOGDIR environment variable or 
-#            set fully qualified path using -l cmdline argument.""" )
-#    else:
-#        logbase = os.path.join( logdir, args.logbasename )
-#    # append date/time stamp to logbasename
-#    now = int( ( datetime.datetime.now() - epoch ).total_seconds() )
-#    args.logbasename = '{0}.{1}'.format( logbase, now )
-#    # attempt to write logfile; easier to fail here than after starting
-#    testlogfile = '{0}.{1}'.format( args.logbasename, 'test' )
-#    with open( testlogfile, 'a' ) as f:
-#        f.write( 'a' )
-#    os.unlink( testlogfile )
     return args
 
 
