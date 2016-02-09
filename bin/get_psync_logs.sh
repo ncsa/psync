@@ -65,7 +65,9 @@ logfile_pfx="$1"
 
 
 for i in $(seq $max_iterations); do
-  date
+  datets=$( date '+%s' )
+  datestr=$( date '+%Y-%m-%dT%H:%M:%S')
+  echo "$datets ($datestr)"
   start=$( date +%s )
   $PSYNCBASEDIR/bin/view_redis_queue -l $logfile_pfx
   end=$( date +%s )
