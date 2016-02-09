@@ -59,6 +59,21 @@ export PSYNCHARDTIMEOUT=14700  #4 hours + 5 mins
 # Can run less than max using set_pool_size
 export PSYNCCONCURRENCY=8
 
+# PSYNCTMPDIR
+# Location where tmpfiles are created (required for hardlinks)
+# The directory will be created at the root of the target filesystem
+# These must be cleaned up manually.
+export PSYNCTMPDIR=__PSYNCTMPDIR__
+
+# PSYNCRMDIR
+# Location where directories to be deleted will be moved
+# Instead of deleting directories (from target that no longer exist on
+# source), which could be a timely process, just move them here and let the
+# admin delete them later.
+# The directory will be created at the root of the target filesystem
+# These must be cleaned up manually.
+export PSYNCRMDIR=__PSYNCRMDIR__
+
 ###
 ### Message queue settings
 ###

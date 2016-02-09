@@ -6,6 +6,7 @@ import datetime
 import pprint
 import argparse
 import os
+import stat
 import fsitem
 
 def process_cmdline():
@@ -60,12 +61,31 @@ def process_cmdline():
     return args
 
 
+def dir_is_writeable( dn ):
+    rv = True
+    if not os.path.isdir( dn ):
+        os.mkdir( dn )
+    if not os.path.isdir( dn ):
+        rv = False
+    if not os.access( dn, os.W_OK | os.X_OK ):
+        rv = False
+    return rv
+
 def run():
     args = process_cmdline()
 
     # Create FSItem's for the cmdline args
     src = fsitem.FSItem( args.src_dir )
     tgt = fsitem.FSItem( args.tgt_dir )
+
+    # Check (or create) tmpdir and rmdir
+    for var in [ 'PSYNCTMPDIR', 'PSYNCRMDIR' ]:
+        leaf = os.environ[ var ]
+        dn = os.path.join( tgt.mountpoint, leaf )
+        if not dir_is_writeable( dn ):
+        raise UserWarning( "Dir missing or not writeable: {0} = '{1}'".format( 
+            var, dn ) )
+
     psyncopts = {}
     for k in ( 'minsecs', 'pre_checksums' ):
         psyncopts[ k ] = getattr( args, k )

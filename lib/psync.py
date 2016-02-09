@@ -28,6 +28,9 @@ logr = redis_logger.Redis_Logger( url=redisconf.BROKER_URL, queue_name='psync_lo
 # TODO - remove rsyncpath after moving symlink_sync to external library
 rsyncpath = os.environ[ 'PYLUTRSYNCPATH' ]
 
+psynctmpdir = os.environ[ 'PSYNCTMPDIR' ]
+psyncrmdir = os.environ[ 'PSYNCRMDIR' ]
+
 localhostname = os.uname()[1]
 
 
@@ -84,14 +87,31 @@ def sync_dir( src, tgt, psyncopts, rsyncopts ):
     # To be accurate, these processes must all finish before proceeding
     #   (use case: previous directory was removed and new file exists by the same name
     #    as the old directory)
+    tmpbase=os.path.join( tgt.mountpoint, psyncrmdir ) )
     for d in tgt_dir_set - src_dir_set:
-        #TODO - for rmdir, get tmpbase from mountpoint + basemod from config file
-        rm_dir( tgt_dirs[ d ].absname, 
-                tmpbase=os.path.join( tgt.mountpoint, '__PSYNCRMDIR__' ) )
+        try:
+            rm_dir( tgt_dirs[ d ].absname, tmpbase=tmpbase )
+        except ( Exception ) as e:
+            logr.error( synctype = 'RMDIR',
+                        msgtype = 'error',
+                        src = tgt_dirs[ d ].absname,
+                        tgt = tmpbase )
     for f in tgt_file_set - src_file_set:
-        rm_file( tgt_files[ f ].absname )
+        try:
+            rm_file( tgt_files[ f ].absname )
+        except ( Exception ) as e:
+            logr.error( synctype = 'RMFILE',
+                        msgtype = 'error',
+                        src = tgt_files[ f ].absname,
+                        tgt = tmpbase )
     for s in tgt_symlink_set - src_symlink_set:
-        rm_file( tgt_symlinks[ s ].absname )
+        try:
+            rm_file( tgt_symlinks[ s ].absname )
+        except ( Exception ) as e:
+            logr.error( synctype = 'RMSYMLINK',
+                        msgtype = 'error',
+                        src = tgt_symlinks[ s ].absname,
+                        tgt = tmpbase )
     # make subdirs (their metadata will get sync'd by another task)
     for dname in src_dir_set:
         newsrc = src_dirs[ dname ]
@@ -143,8 +163,7 @@ def sync_file( src, tgt, rsyncopts ):
     :param rsyncopts dict: options passed to pylut.syncdir & pylut.syncfile
     :return: None
     """
-    #TODO - get basemod from config file (or cmdline?)
-    basemod = '__PSYNCTMPDIR__'
+    basemod = psynctmpdir
     rsyncopts.update( tmpbase = os.path.join( tgt.mountpoint, basemod ),
                       keeptmp = True,
                     )
@@ -206,7 +225,7 @@ def dir_scan( dirobj, psyncopts ):
             if entry.is_dir():
                 dirs[ name ] = entry
             else:
-                if checkage and entry.mtime > maxage:
+                if checkage and entry.ctime > maxage:
                     logr.warning( synctype = 'dir_scan',
                                   msgtype  = 'skipentry',
                                   action   = 'InodeTooYoung',
@@ -222,7 +241,7 @@ def dir_scan( dirobj, psyncopts ):
             # have to ignore these, since no way to tell if FS is live or quiesced
             if e.errno != 2:
                 raise e
-            #logr.warning( 'Caught error in psync.dir_scan: {0}'.format( e ) )
+            logr.warning( 'Caught error in psync.dir_scan: {0}'.format( e ) )
     return ( dirs, files, symlinks )
 
 
