@@ -34,6 +34,8 @@ re_traceback_ignore = re.compile(
 def process_cmdline():
     parser = argparse.ArgumentParser()
     parser.add_argument( 'infile' )
+    parser.add_argument( '-g', '--grep',
+        help='Like fgrep on raw text of each error' )
     picklegroup = parser.add_argument_group( title='Pickling options',
         description="""Specifying -n and -p at the same time will cause the source
             file to be re-parsed and a new pickle file created.""")
@@ -181,6 +183,14 @@ def print_errors( errdict, args ):
         print( '='*sz )
 
 
+def grep_errors( errors, args ):
+    for k,v in errors.iteritems():
+        for rec in v[ 'instances' ]:
+            record_as_string = pprint.pformat( rec )
+            if args.grep in record_as_string:
+                print record_as_string
+
+
 if __name__ == "__main__":
     loglvl = logging.WARNING
     logging.basicConfig( level=loglvl )
@@ -192,7 +202,10 @@ if __name__ == "__main__":
             errors = pickle.load( f )
     else:
         errors = process_file( args.infile )
-    print_errors( errors, args )
+    if args.grep:
+        grep_errors( errors, args )
+    else:
+        print_errors( errors, args )
     if args.pickleout:
         with open( pickle_fn, 'wb' ) as f:
             pickle.dump( errors, f )

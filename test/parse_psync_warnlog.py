@@ -123,10 +123,19 @@ class PsyncWarning( object ):
             lines.append( outfmt.format( a, val ) )
         return '\n'.join( lines )
 
+    def grep( self, needle ):
+        rv = ''
+        haystack = self.raw()
+        if needle in haystack:
+            rv = haystack
+        return rv
+
 
 def process_cmdline():
     parser = argparse.ArgumentParser()
     parser.add_argument( 'infile' )
+    parser.add_argument( '-g', '--grep',
+        help='Like fgrep on raw text of each warning' )
     picklegroup = parser.add_argument_group( title='Pickling options',
         description="""Specifying -n and -p at the same time will cause the source
             file to be re-parsed and a new pickle file created.""")
@@ -253,6 +262,14 @@ def print_all( all_warnings, args ):
         print( fmt.format( total_error_count ) )
         print( '='*sz )
 
+
+def grep_warnings( all_warnings, args ):
+    for w_type, w_list in all_warnings.iteritems():
+        for w in w_list:
+            val = w.grep( args.grep )
+            if len( val ) > 0:
+                print( val )
+            
 #    print( PsyncWarning.csv_headers(), end='' )
 #    for k, v in all_warnings.iteritems():
 #        print( 'ERRTYPE: {0}  COUNT: {1} '.format( k, len( v ) ) )
@@ -278,4 +295,7 @@ if __name__ == "__main__":
         with open( pickle_fn, 'wb' ) as f:
             pickle.dump( warnings, f )
 
-    print_all( warnings, args )
+    if args.grep:
+       grep_warnings( warnings, args )
+    else:
+        print_all( warnings, args )
