@@ -68,17 +68,6 @@ fi
 # tmp2 = duplicate dirs
 $PSYNCBASEDIR/test/parse_psync_infolog.py $LOGFILE > $tmp 2>$tmp2
 
-### This was moved to parse_psync_infolog.py
-#echo 
-#echo "DIRS PROCESSED MORE THAN ONCE"
-#>$tmp3 fgrep DUPLICATE $tmp2 \
-#| sort | uniq -c | sort -n | awk '{print $1}' | sort -n | uniq -c
-#if [[ -s $tmp3 ]]; then
-#    cat $tmp3
-#else
-#    echo "   n/a"
-#fi
-
 echo
 echo "5 LONGEST RUNNING TASKS"
 dupfile=${LOGFILE}.syncdir_data
