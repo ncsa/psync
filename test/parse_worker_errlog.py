@@ -18,7 +18,7 @@ log_msg_start = re.compile( '\[[\d-]{10} [\d:,]{13} ([A-Z]+)/([a-zA-Z]+)\] ')
 #    '|' 'Got shutdown from remote'
 ignore_msgs = re.compile( 
     'CDeprecationWarning'
-    '|' 'worker.@nid\d+ ready.$'
+    '|' 'worker.@(nid|ie)\d+ ready.$'
     '|' "OSError\(17, 'File exists'\)"
     '|' "Got shutdown from remote"
     '|' "Can't shrink pool"
@@ -93,11 +93,11 @@ def process_error_msg( error_dict, lines ):
         error_dict[ es][ 'count' ] += 1
 
 
-def parse_files( args ):
+def parse_files( filelist ):
     errors = collections.OrderedDict()
     lines = []
     for l in fileinput.input( 
-        files=args.files if len(args.files) > 0 else ('-', ) 
+        files=filelist if len( filelist ) > 0 else ( '-', ) 
         ) :
         match = log_msg_start.match( l )
         if match and len( lines ) > 0:
@@ -115,7 +115,7 @@ if __name__ == "__main__":
         with open( args.picklefile, 'rb' ) as f:
             errors = pickle.load( f )
     else:
-        errors = parse_files( args )
+        errors = parse_files( args.files )
     total_error_count = 0
     err_indices = { i: e for i, e in enumerate( errors, start=1) }
     if args.show > 0:
