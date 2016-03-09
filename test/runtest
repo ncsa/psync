@@ -1,0 +1,52 @@
+#!/bin/sh -e
+
+configfile="${BASH_SOURCE%/*}/../config/bashrc"
+[[ -r $configfile ]] || {
+  echo "ERROR Can't find config file '$configfile'. Exiting"
+  exit 1
+}
+source "$configfile"
+
+cleanup=""
+if [[ -r "$PSYNCVENVDIR/bin/activate" ]]; then
+  source "$PSYNCVENVDIR/bin/activate"
+  cleanup="deactivate"
+fi
+
+
+function croak {
+  echo "ERROR $*" 1>&2
+  exit 99
+}
+
+
+function check_rmq {
+  $PSYNCBASEDIR/bin/rabbitmq_psync status &>/dev/null || croak \
+    "RabbitMQ not started"
+}
+
+
+function check_redis {
+  $PSYNCBASEDIR/bin/redis_psync status &>/dev/null || croak \
+    "Redis not started"
+}
+
+
+function check_workers {
+  $PSYNCBASEDIR/bin/workers_status &>/dev/null || croak \
+    "Psync Celery service not started"
+}
+
+
+check_rmq
+
+check_redis
+
+check_workers
+
+oldcwd=$(pwd)
+cd $PSYNCBASEDIR/test
+py.test $*
+cd "$oldcwd"
+
+$cleanup
