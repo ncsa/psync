@@ -83,8 +83,8 @@ def run():
         leaf = os.environ[ var ]
         dn = os.path.join( tgt.mountpoint, leaf )
         if not dir_is_writeable( dn ):
-        raise UserWarning( "Dir missing or not writeable: {0} = '{1}'".format( 
-            var, dn ) )
+            raise UserWarning( "Dir missing or not writeable: {0} = '{1}'".format( 
+                var, dn ) )
 
     psyncopts = {}
     for k in ( 'minsecs', 'pre_checksums' ):
