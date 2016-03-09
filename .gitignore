@@ -1,9 +1,13 @@
+# psync specific
+venv
+
 # Python Related #
 ##################
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
+.cache/
 
 # Virtual environments
 venv/
