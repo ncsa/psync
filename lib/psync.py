@@ -87,7 +87,7 @@ def sync_dir( src, tgt, psyncopts, rsyncopts ):
     # To be accurate, these processes must all finish before proceeding
     #   (use case: previous directory was removed and new file exists by the same name
     #    as the old directory)
-    tmpbase=os.path.join( tgt.mountpoint, psyncrmdir ) )
+    tmpbase=os.path.join( tgt.mountpoint, psyncrmdir )
     for d in tgt_dir_set - src_dir_set:
         try:
             rm_dir( tgt_dirs[ d ].absname, tmpbase=tmpbase )
@@ -241,7 +241,11 @@ def dir_scan( dirobj, psyncopts ):
             # have to ignore these, since no way to tell if FS is live or quiesced
             if e.errno != 2:
                 raise e
-            logr.warning( 'Caught error in psync.dir_scan: {0}'.format( e ) )
+            logr.warning( 'Caught error in psync.dir_scan: {0}'.format( e ),
+                          synctype = 'dir_scan',
+                          msgtype  = 'error',
+                          action   = '',
+                          src      = str( entry ) )
     return ( dirs, files, symlinks )
 
 
