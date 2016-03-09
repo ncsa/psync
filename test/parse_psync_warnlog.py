@@ -25,11 +25,14 @@ class PsyncWarning( object ):
                           '|' 'Cannot send after transport endpoint shutdown'
                           '|' 'No such device'
                           '|' 'Input/output error'
+                          '|' '\[Errno 17\] File exists'
                           )
-    detail_keys = ( 'synctype', 'msgtype', 'action', 'error', 'src', )
+    #detail_keys = ( 'synctype', 'msgtype', 'action', 'error', 'src', )
+    detail_keys = ( 'synctype', 'action', 'error', 'src', )
 
     def __init__( self, dict_record ):
         self.keys = []
+        self.msgtype = 'blank'
         for k in self.detail_keys:
             setattr( self, k, None )
         for k in dict_record:
@@ -44,15 +47,19 @@ class PsyncWarning( object ):
 
     def parse_errtype( self, dict_record ):
         errtype = None
+        hay = ''
         if 'error' in dict_record:
-            try:
-                m = self.re_errtypes.search( dict_record[ 'error' ] )
-            except ( TypeError ) as e:
-                print( "caught TypeError" )
-                pprint.pprint( dict_record )
-                raise SystemExit()
-            if m:
-                errtype = m.group()
+            hay = dict_record[ 'error' ]
+        elif 'msg' in dict_record:
+            hay = dict_record[ 'msg' ]
+        try:
+            m = self.re_errtypes.search( hay )
+        except ( TypeError ) as e:
+            print( "caught TypeError" )
+            pprint.pprint( dict_record )
+            raise SystemExit()
+        if m:
+            errtype = m.group()
         elif 'action' in dict_record:
             errtype = self.msgtype + ' ' + self.action
         return errtype
@@ -182,8 +189,10 @@ def process_cmdline():
 
 def process_warning( rec, warnings ):
     if not 'msgtype' in rec:
-        pprint.pprint( rec )
-        raise UserWarning( "KeyError: 'msgtype' not found in record" )
+        logr.warning( 'No msgtype found in record: {0}'.format( 
+            pprint.pformat( rec ) ) )
+#        pprint.pprint( rec )
+#        raise UserWarning( "KeyError: 'msgtype' not found in record" )
 #    if rec[ 'msgtype' ] == 'skipentry':
 #        return
     #pprint.pprint( rec )
@@ -270,15 +279,6 @@ def grep_warnings( all_warnings, args ):
             if len( val ) > 0:
                 print( val )
             
-#    print( PsyncWarning.csv_headers(), end='' )
-#    for k, v in all_warnings.iteritems():
-#        print( 'ERRTYPE: {0}  COUNT: {1} '.format( k, len( v ) ) )
-#    for x in all_warnings:
-#        print( x.as_csv(), end='' )
-##        if x.errtype == 'Setstripe failed':
-##            print( x.src )
-#        print( x.errtype )
-
 
 if __name__ == "__main__":
     loglvl = logging.WARNING
