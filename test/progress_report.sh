@@ -77,7 +77,7 @@ tail -5 $tmp2
 
 echo
 echo PROGRESS INFO
-cat $tmp
+cat ${LOGFILE}.summary
 
 echo
 echo REPORT TIME : $SECONDS secs

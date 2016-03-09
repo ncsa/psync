@@ -18,7 +18,7 @@ def process_cmdline():
         help='Source file system has N inodes total. '
              'Used to estimate completion progress.' )
     default_options = {
-        'inodes': 120000000,
+        'inodes': 124674897,
     }
     parser.set_defaults( **default_options )
     args = parser.parse_args()
@@ -103,27 +103,29 @@ def print_psync_summary( args, time_data, sync_types, total_rec_count ):
     pct_complete_by_inodes = total_inodes * 100.0 / args.inodes
     pct_rate = pct_complete_by_inodes / elapsed.total_seconds() * 3600
     eta_complete = ( 100.0 - pct_complete_by_inodes ) / pct_rate
-    print( 
-        'Record counts: {rc}\n'
-        'Total log record count: {tlrc}\n'
-        'Total inodes: {icnt}\n'
-        'Start time: {st_ts} ({st})\n'
-        'End time: {et_ts} ({et})\n'
-        'Elapsed Time: {el}\n'
-        'Percent Complete: {pct_c:4.2f}\n'
-        'Percent rate (per Hour): {pct_ph:4.2f}\n'
-        'Estimated time remaining (hours): {eta:4.2f}\n'.format( 
-        rc = pprint.pformat( sync_types ),
-        tlrc = total_rec_count,
-        icnt = total_inodes,
-        st_ts = time_data[ 'start_ts' ],
-        st = str( start_time ),
-        et_ts = time_data[ 'end_ts' ],
-        et = str( end_time ),
-        el = str( elapsed ),
-        pct_c = pct_complete_by_inodes,
-        pct_ph = pct_rate,
-        eta = eta_complete ) )
+    psync_summary_outfile = args.infile + '.summary'
+    with open( psync_summary_outfile, 'w' ) as f:
+        print( 
+            'Record counts: {rc}\n'
+            'Total log record count: {tlrc}\n'
+            'Total inodes: {icnt}\n'
+            'Start time: {st_ts} ({st})\n'
+            'End time: {et_ts} ({et})\n'
+            'Elapsed Time: {el}\n'
+            'Percent Complete: {pct_c:4.2f}\n'
+            'Percent rate (per Hour): {pct_ph:4.2f}\n'
+            'Estimated time remaining (hours): {eta:4.2f}\n'.format( 
+            rc = pprint.pformat( sync_types ),
+            tlrc = total_rec_count,
+            icnt = total_inodes,
+            st_ts = time_data[ 'start_ts' ],
+            st = str( start_time ),
+            et_ts = time_data[ 'end_ts' ],
+            et = str( end_time ),
+            el = str( elapsed ),
+            pct_c = pct_complete_by_inodes,
+            pct_ph = pct_rate,
+            eta = eta_complete ), file=f )
 
 
 def print_syncdir_summary( args, syncdir_data ):
