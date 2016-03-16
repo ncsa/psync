@@ -125,11 +125,12 @@ def in_sync( src, tgt ):
     """
     rv = False
     cmd = [ os.environ[ 'PYLUTRSYNCPATH' ] ]
-    opts = None
-    args = [ '-nilHrAtpog' ]
+    opts = { '--timeout': 20 }
+    args = [ '-nirlHAtpog', '--specials' ]
     args.append( '{0}/'.format( src ) )
     args.append( '{0}/'.format( tgt ) )
     ( output, errput ) = runcmd( cmd, opts, args )
+    #TODO-remove this filter once dir mtimes are fixed (issue #2)
     # filter out known dir mtime mismatches
     leftovers = []
     for line in output.splitlines():
