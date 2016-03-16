@@ -74,6 +74,14 @@ export PSYNCTMPDIR=__PSYNCTMPDIR__
 # These must be cleaned up manually.
 export PSYNCRMDIR=__PSYNCRMDIR__
 
+# PSYNCRUNASUSER
+# PSYNCRUNASGROUP
+# If psyncd is run as root, celery workers will run with as this unpriviledged
+# user
+# NOTE: running as non-root user is untested
+export PSYNCRUNASUSER=root
+export PSYNCRUNASGROUP=root
+
 ###
 ### Message queue settings
 ###

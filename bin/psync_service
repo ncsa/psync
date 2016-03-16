@@ -33,13 +33,13 @@
 #
 VERSION=10.1
 echo "celery init v${VERSION}."
-if [ $(id -u) -ne 0 ]; then
-    echo "Error: This program can only be used by the root user."
-    echo "       Unprivileged users must use the 'celery multi'
-utility, "
-    echo "       or 'celery worker --detach'."
-    exit 1
-fi
+#if [ $(id -u) -ne 0 ]; then
+#    echo "Error: This program can only be used by the root user."
+#    echo "       Unprivileged users must use the 'celery multi'
+#utility, "
+#    echo "       or 'celery worker --detach'."
+#    exit 1
+#fi
 
 
 # Can be a runlevel symlink (e.g. S02celeryd)
@@ -59,14 +59,17 @@ DEFAULT_CELERYD="-m celery worker --detach"
 
 CELERY_DEFAULTS=${CELERY_DEFAULTS:-"/etc/default/${SCRIPT_NAME}"}
 
+EFF_UID=$( id -u )
+
 # Make sure executable configuration script is owned by root
+# 10Feb2016 - andylytical - relax this to allow current user (untested)
 _config_sanity() {
     local path="$1"
     local owner=$(ls -ld "$path" | awk '{print $3}')
     local iwgrp=$(ls -ld "$path" | cut -b 6)
     local iwoth=$(ls -ld "$path" | cut -b 9)
 
-    if [ "$(id -u $owner)" != "0" ]; then
+    if [ "$(id -u $owner)" != "$EFF_UID" ]; then
         echo "Error: Config script '$path' must be owned by root!"
         echo
         echo "Resolution:"
@@ -241,7 +244,11 @@ _get_pids() {
 
 
 _chuid () {
-    su "$CELERYD_USER" -c "$CELERYD_MULTI $*"
+    if [[ $EFF_UID -eq 0 ]]; then
+        su "$CELERYD_USER" -c "$CELERYD_MULTI $*"
+    else
+        $CELERYD_MULTI $*
+    fi
 }
 
 
