@@ -1,5 +1,6 @@
 # psync specific
 venv
+tmp/
 
 # Python Related #
 ##################
