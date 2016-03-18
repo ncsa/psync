@@ -50,8 +50,10 @@ class Psync_Task( celery.Task ):
 @app.task( base=Psync_Task )
 def sync_dir( src, tgt, psyncopts, rsyncopts ):
     """
-    Celery task; read contents of dir, sync small files and symlinks, 
-    enqueue large files and dirs
+    Celery task; read contents of dir, 
+    create target dir if needed,
+    delete contents from target as needed,
+    enqueue subdirs and files as new sync tasks
     :param src FSItem: source dir
     :param src FSItem: target dir
     :param psyncopts dict: options for adjusting psync behavior
@@ -62,27 +64,23 @@ def sync_dir( src, tgt, psyncopts, rsyncopts ):
                msgtype  = 'start',
                src      = str( src ),
                tgt      = str( tgt ) )
-    ( src_dirs, src_files, src_symlinks ) = dir_scan( src, psyncopts )
-    tgt_dirs, tgt_files, tgt_symlinks = [ {} ] * 3
+    ( src_dirs, src_files ) = dir_scan( src, psyncopts )
+    tgt_dirs, tgt_files = [ {} ] * 2
     if os.path.exists( str( tgt ) ):
-        ( tgt_dirs, tgt_files, tgt_symlinks ) = dir_scan( tgt, psyncopts )
+        ( tgt_dirs, tgt_files ) = dir_scan( tgt, psyncopts )
     # Create sets of names of each filetype from both src and tgt
     src_dir_set = set( src_dirs.keys() )
     src_file_set = set( src_files.keys() )
-    src_symlink_set = set( src_symlinks.keys() )
     tgt_dir_set = set( tgt_dirs.keys() )
     tgt_file_set = set( tgt_files.keys() )
-    tgt_symlink_set = set( tgt_symlinks.keys() )
     logr.info( synctype = 'SYNCDIR',
                msgtype  = 'info',
                src      = str( src ),
                tgt      = str( tgt ),
                num_src_dirs    = len( src_dir_set ), 
                num_src_files   = len( src_file_set ), 
-               num_src_symlinks= len( src_symlink_set ), 
                num_tgt_dirs    = len( tgt_dir_set ), 
-               num_tgt_files   = len( tgt_file_set ), 
-               num_tgt_symlinks= len( tgt_symlink_set ) )
+               num_tgt_files   = len( tgt_file_set ) )
     # Delete entries in tgt that no longer exist in src
     # To be accurate, these processes must all finish before proceeding
     #   (use case: previous directory was removed and new file exists by the same name
@@ -104,15 +102,7 @@ def sync_dir( src, tgt, psyncopts, rsyncopts ):
                         msgtype = 'error',
                         src = tgt_files[ f ].absname,
                         tgt = tmpbase )
-    for s in tgt_symlink_set - src_symlink_set:
-        try:
-            rm_file( tgt_symlinks[ s ].absname )
-        except ( Exception ) as e:
-            logr.error( synctype = 'RMSYMLINK',
-                        msgtype = 'error',
-                        src = tgt_symlinks[ s ].absname,
-                        tgt = tmpbase )
-    # make subdirs (their metadata will get sync'd by another task)
+    # iterate over dirs
     for dname in src_dir_set:
         newsrc = src_dirs[ dname ]
         if dname not in tgt_dirs:
@@ -132,15 +122,8 @@ def sync_dir( src, tgt, psyncopts, rsyncopts ):
             tgt_files[ fname ] = _mk_new_fsitem( tgt, fname )
         newtgt = tgt_files[ fname ]
         file_sync( newsrc, newtgt, psyncopts, rsyncopts )
-    # iterate over symlinks
-    for sname in src_symlink_set:
-        newsrc = src_symlinks[ sname ]
-        if sname not in tgt_symlinks:
-            tgt_symlinks[ sname ] = _mk_new_fsitem( tgt, sname )
-        newtgt = tgt_symlinks[ sname ]
-        symlink_sync( newsrc, newtgt, rsyncopts )
     # sync the (local) dir to set metadata
-    dir_sync( src, tgt, psyncopts, rsyncopts )
+    dir_sync_meta( src, tgt, psyncopts, rsyncopts )
     logr.info( synctype = 'SYNCDIR',
                msgtype  = 'end',
                src      = str( src ),
@@ -157,7 +140,7 @@ def _mk_new_fsitem( parent, name ):
 @app.task( base=Psync_Task )
 def sync_file( src, tgt, rsyncopts ):
     """
-    Celery task, sync a regular file
+    Celery task, sync a file
     :param src FSItem: src file
     :param tgt FSItem: tgt file
     :param rsyncopts dict: options passed to pylut.syncdir & pylut.syncfile
@@ -194,7 +177,8 @@ def sync_file( src, tgt, rsyncopts ):
                               tgt_chksum = tgt.checksum() )
     elif action_type[ 'meta_update' ]:
         sync_action = 'meta_update'
-        
+    #TODO-insert dir mtime fix here
+    sync_dir_mtime( src.parent, tgt.parent, **rsyncopts )
     msg_parts.update( synctype = 'SYNCFILE',
                       msgtype  = 'end',
                       src = str( src ),
@@ -208,11 +192,10 @@ def dir_scan( dirobj, psyncopts ):
     Get directory contents
     :param dirobj FSItem: directory to scan
     :param psyncopts dict: options for adjusting psync behavior
-    :return: tuple of dicts ( dirs, files, symlinks ) where keys=name and values=FSItem object
+    :return: tuple of dicts ( dirs, files ) where keys=name and values=FSItem object
     """
     dirs = {}
     files = {}
-    symlinks = {}
     checkage = False
     if psyncopts[ 'minsecs' ] > 0:
         maxage = int( time.time() ) - psyncopts[ 'minsecs' ]
@@ -224,33 +207,35 @@ def dir_scan( dirobj, psyncopts ):
         try:
             if entry.is_dir():
                 dirs[ name ] = entry
-            else:
+            elif entry.is_file():
                 if checkage and entry.ctime > maxage:
                     logr.warning( synctype = 'dir_scan',
                                   msgtype  = 'skipentry',
                                   action   = 'InodeTooYoung',
                                   src      = str( entry ) )
                     continue
-                if entry.is_file():
-                    files[ name ] = entry
-                elif entry.is_symlink():
-                    symlinks[ name ] = entry
+                files[ name ] = entry
+            else:
+                logr.warning( synctype = 'dir_scan',
+                              msgtype  = 'skipentry',
+                              action   = 'unknown file type',
+                              src      = str( entry ) )
         except ( OSError ) as e:
-            # Any one of is_dir, is_file, is_symlink can throw
+            # Any one of is_dir, is_file
             # OSError: [Errno 2] No such file or directory
             # have to ignore these, since no way to tell if FS is live or quiesced
             if e.errno != 2:
                 raise e
-            logr.warning( 'Caught error in psync.dir_scan: {0}'.format( e ),
+            logr.warning( 'Caught exception in psync.dir_scan',
                           synctype = 'dir_scan',
-                          msgtype  = 'error',
-                          action   = '',
+                          msgtype  = 'warning',
+                          action   = '{0}'.format( e ),
                           src      = str( entry ) )
-    return ( dirs, files, symlinks )
+    return ( dirs, files )
 
 
 def rm_file( path ):
-    """ Remove the file or symlink
+    """ Remove the specified file
     """
     logr.info( synctype = 'RMFILE',
                src      = str( path ) )
@@ -274,11 +259,9 @@ def rm_dir( path, tmpbase ):
                tgt      = tgt )
 
 
-def dir_sync( src, tgt, psyncopts, rsyncopts ):
+def dir_sync_meta( src, tgt, psyncopts, rsyncopts ):
     """
-    Wrap details of directory sync.
-    Create tgt dir.
-    Put src dir on queue.
+    Sync metadata only of a directory
     :param src FSItem: src directory
     :param tgt FSItem: tgt directory
     :param psyncopts dict: options for adjusting psync behavior
@@ -311,94 +294,9 @@ def file_sync( src, tgt, psyncopts, rsyncopts ):
         sync_file.apply_async( ( src, tgt, rsyncopts ) )
 
 
-def symlink_sync( src, tgt, rsyncopts ):
-    """
-    Wrap details of symlink sync.
-    :param src FSItem: src symlink
-    :param tgt FSItem: tgt symlink
-    :return: None
-    Note: The target of the symlink is copied as is, no changes are made to it.
-    """
-    # TODO - move symlink sync to a function in the pylut module.
-    #        This will allow future enhancements to use a module other than 
-    #        pylut without breaking psync.
-
-    #resolve symlink
-    sym_tgt_orig = os.readlink( src.absname )
-    sym_tgt_new = sym_tgt_orig
-    symtype = 'ignored'
-    symaction = 'create'
-    do_symlink = True
-#    # attempt to replace mountpoint for an absolute symlink
-#    if sym_tgt_orig.startswith( src.mountpoint ):
-#        sym_tgt_new = sym_tgt_orig.replace( src.mountpoint, tgt.mountpoint, 1 )
-#        symtype = 'absolute'
-    logr.info( synctype     = 'SYMLINK',
-               msgtype      = 'start',
-               src_src      = str( src ),
-               src_tgt      = sym_tgt_orig,
-               tgt_src      = str( tgt ),
-               tgt_tgt      = sym_tgt_new,
-               symlink_type = symtype )
-    if tgt.exists():
-        if tgt.is_symlink():
-            # check existing symtgt against what we think it should be
-            tgt_sym_tgt = os.readlink( str( tgt ) )
-            if tgt_sym_tgt == sym_tgt_new:
-                symaction = 'None'
-                do_symlink = False
-            else:
-                os.unlink( str( tgt ) )
-        else:
-            # tgt exists but is not a symlink, remove it so we can make a symlink
-            os.unlink( str( tgt ) )
-    if do_symlink:
-        cmd = [ rsyncpath ]
-        opts = None
-        args = [ '-X', '-A', '--super', '-l' ]
-        if 'synctimes' in rsyncopts:
-            args.append( '-t' )
-        if 'syncperms' in rsyncopts:
-            args.append( '-p' )
-        if 'syncowner' in rsyncopts:
-            args.append( '-o' )
-        if 'syncgroup' in rsyncopts:
-            args.append( '-g' )
-        args.extend( [ src, tgt ] )
-        try:
-            ( output, errput ) = runcmd( cmd, opts, args )
-        except ( Run_Cmd_Error ) as e:
-            logr.error( 'caught RunCmdError in sync_symlink',
-                          exception_type = type( e ),
-                          exception = e,
-                          args = args,
-                          kwargs = opts )
-            return
-#                          traceback = traceback.format_tb( sys.exc_info()[2] ) )
-#        finally:
-#            sys.exc_clear()
-        
-#        try:
-#            os.symlink( sym_tgt_new, tgt.absname )
-#            # TODO - utime changes the target file instead of the symlink itself
-#            os.utime( sym_tgt_new, ( src.atime, src.mtime ) )
-#        except ( OSError ) as e:
-#            # TODO - log exception as an error, not a warning
-#            logr.warning( synctype     = 'SYMLINK',
-#                       msgtype      = 'error',
-#                       src_src      = str( src ),
-#                       src_tgt      = sym_tgt_orig,
-#                       tgt_src      = str( tgt ),
-#                       tgt_tgt      = sym_tgt_new,
-#                       error        = str( e ) )
-#            return
-    logr.info( synctype     = 'SYMLINK',
-               msgtype      = 'end',
-               src_src      = str( src ),
-               src_tgt      = sym_tgt_orig,
-               tgt_src      = str( tgt ),
-               tgt_tgt      = sym_tgt_new,
-               action       = symaction )
+def sync_dir_mtime( src, tgt, syncopts ):
+    #pylut.dir_sync( src, tgt, *syncopts )
+    pass
 
 
 if __name__ == '__main__':

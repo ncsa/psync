@@ -156,7 +156,7 @@ def test_full_sync( testdir ):
     #pprint.pprint( src )
     #pprint.pprint( tgt )
     psync.sync_dir.delay( src, tgt, psyncopts, rsyncopts )
-    assert wait_for( psync_is_complete, max_seconds=60 )
+    assert wait_for( psync_is_complete, max_seconds=20 )
     assert error_free_sync()
 
     # TODO ?? check RMQ for errors ??

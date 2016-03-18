@@ -136,17 +136,19 @@ A psync is finished when all of the following are true:
   * Note: can also use `/path/to/psync/bin/psyncd stop` on each worker node, 
     but using `workers_shutdown` is usually easier and faster.
 2. Stop redis service
-  1. Login to the machine that running redis
+  1. Login to the machine that is running redis
   2. `/path/to/psync/bin/redis_psync stop`
 3. Stop rabbitmq service
-  1. `/path/to/psync/bin/rabbitmq_psync stop`
+  1. Login to the machine that is running rabbitmq
+  2. `/path/to/psync/bin/rabbitmq_psync stop`
 
 ## Other useful commands
 * Check/Change number of procs per worker
   * `/path/to/psync/bin/set_pool_size -h`
   * Note: It is best to set the pool size before starting psync.  Once the
-    workers are busy, changing pool size will likely timeout waiting for
-    a worker process to become idle.
+    workers are busy, reducing pool size will likely timeout waiting for
+    a worker process to become idle. On the other hand, growing the pool size 
+    is easy.
 
 * To keep logs from separate psync runs organized, use the following command
   to rename all logs from a given run by adding the start timestamp as

@@ -1,0 +1,9 @@
+#!/bin/sh -e
+
+source ~aloftus/venv/psync_ie/bin/activate
+source ~aloftus/psync/config/bashrc_ie
+
+export C_FORCE_ROOT=1
+celery worker -A psync --concurrency=1 -O fair -l debug
+
+deactivate
