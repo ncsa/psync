@@ -149,6 +149,11 @@ case "$1" in
             rm_rmq_url
             rm_broker_url
         ;;
+    rebuild_url_file)
+        get_bind_ip
+        save_rmq_url || croak "Unable to save rmq url to file"
+        save_broker_url || croak "Unable to save broker url to file"
+        ;;
     *)
         usage
         ;;

@@ -66,7 +66,8 @@ fi
 # Parse infolog
 # tmp = progress info
 # tmp2 = duplicate dirs
-$PSYNCBASEDIR/test/parse_psync_infolog.py $LOGFILE > $tmp 2>$tmp2
+# The $@ allows to pass "-i <num_inodes>" to parse_infolog
+$PSYNCBASEDIR/test/parse_psync_infolog.py $@ $LOGFILE > $tmp 2>$tmp2
 
 echo
 echo "5 LONGEST RUNNING TASKS"

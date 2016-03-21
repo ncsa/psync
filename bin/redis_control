@@ -231,6 +231,11 @@ case "$1" in
         rm_redis_url
         rm_broker_url
         ;;
+    rebuild_url_file)
+        get_bind_ip
+        save_redis_url || croak "Unable to save redis url to file"
+        save_broker_url || croak "Unable to save broker url to file"
+        ;;
     *)
         usage
         ;;
