@@ -24,6 +24,7 @@ class PsyncWarning( object ):
                           '|' 'get_xattr_data'
                           '|' 'Cannot send after transport endpoint shutdown'
                           '|' 'No such device'
+                          '|' 'No space left on device'
                           '|' 'Input/output error'
                           '|' '\[Errno 17\] File exists'
                           )
