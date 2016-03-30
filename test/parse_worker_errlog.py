@@ -59,7 +59,7 @@ def process_cmdline():
     return args
 
 
-def get_error_signature( args, lines ):
+def get_error_signature( lines ):
     relevant_lines = []
     first_line = lines[ 0 ]
     match = log_msg_start.match( first_line )
@@ -87,7 +87,7 @@ def ignore_msg( lines ):
 
 def process_error_msg( error_dict, lines ):
     if not ignore_msg( lines ):
-        es = get_error_signature( args, lines )
+        es = get_error_signature( lines )
         if es not in error_dict:
             error_dict[ es ] = { 'data': lines, 'count': 0 }
         error_dict[ es][ 'count' ] += 1

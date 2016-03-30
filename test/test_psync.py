@@ -99,7 +99,7 @@ def get_worker_errors():
     worker_log_dir = os.path.join( os.environ[ 'PSYNCVARDIR' ], 'psync_service' )
     for root, dirs, files in os.walk( worker_log_dir ):
         logfiles.extend( [ os.path.join( root, f ) for f in files if f.endswith( '.log' ) ] )
-    lines = parse_worker_errlog.parse_files( logfiles )
+    #lines = parse_worker_errlog.parse_files( logfiles )
     return parse_worker_errlog.parse_files( logfiles )
 
 
@@ -111,10 +111,12 @@ def error_free_sync():
     worker_errs = get_worker_errors()
     if len( worker_errs ) > 0:
         rv = False
+        print( 'Worker Errors:' )
         pprint.pprint( worker_errs )
     task_errs = get_task_errors()
     if len( task_errs ) > 0:
         rv = False
+        print( 'Task Errors:' )
         pprint.pprint( task_errs )
     return rv
     

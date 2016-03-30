@@ -156,7 +156,7 @@ def sync_file( src, tgt, rsyncopts ):
                tgt      = str( tgt ),
                size     = src.size )
     try:
-        tmpfn, action_type, attrs_affected = pylut.syncfile( src, tgt, **rsyncopts )
+        tmpfn, action_type = pylut.syncfile( src, tgt, **rsyncopts )
     except ( pylut.PylutError ) as e:
         logr.warning( synctype = 'SYNCFILE',
                       msgtype  = 'error',
@@ -172,13 +172,13 @@ def sync_file( src, tgt, rsyncopts ):
     if action_type[ 'data_copy' ]:
         sync_action = 'data_copy'
         if rsyncopts[ 'post_checksums' ] and not rsyncopts[ 'pre_checksums' ]:
-            # If pre_checksums is enabled, then skip adding checksums again here
+            # do post checksums only if pre_checksums haven't done it already
             msg_parts.update( src_chksum = src.checksum(),
                               tgt_chksum = tgt.checksum() )
     elif action_type[ 'meta_update' ]:
         sync_action = 'meta_update'
     #TODO-insert dir mtime fix here
-    sync_dir_mtime( src.parent, tgt.parent, **rsyncopts )
+    #sync_dir_mtime( src.parent, tgt.parent, rsyncopts )
     msg_parts.update( synctype = 'SYNCFILE',
                       msgtype  = 'end',
                       src = str( src ),
