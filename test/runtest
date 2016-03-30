@@ -21,20 +21,26 @@ function croak {
 
 
 function check_rmq {
+  echo -n "Check RMQ ... "
   $PSYNCBASEDIR/bin/rabbitmq_psync status &>/dev/null || croak \
     "RabbitMQ not started"
+  echo "OK"
 }
 
 
 function check_redis {
+  echo -n "Check Redis ... "
   $PSYNCBASEDIR/bin/redis_psync status &>/dev/null || croak \
     "Redis not started"
+  echo "OK"
 }
 
 
 function check_workers {
+  echo -n "Check Celery worker(s) ... "
   $PSYNCBASEDIR/bin/workers_status &>/dev/null || croak \
     "Psync Celery service not started"
+  echo "OK"
 }
 
 

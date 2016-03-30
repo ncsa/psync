@@ -221,5 +221,7 @@ if __name__ == '__main__':
     for inode,elems in objects.iteritems():
         print( inode, end=' ' )
         print( *elems, sep='\n\t' )
+
+    pprint.pprint( objects )
         
 # vim:set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
