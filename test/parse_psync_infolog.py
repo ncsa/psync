@@ -50,27 +50,27 @@ def count_sync_types( rec, sync_types ):
 
 
 def process_syncdir_stats( rec, syncdir_data ):
+    if rec[ 'synctype' ] != 'SYNCDIR':
+        return
     dir_data = syncdir_data[ 'dir_data' ]
     dups = syncdir_data[ 'dups' ]
     working = syncdir_data[ 'working' ]
-    if rec[ 'synctype' ] != 'SYNCDIR':
-        return
     ts = rec[ 'ts' ]
     msgtype = rec[ 'msgtype' ]
     src = rec[ 'src' ]
     if src in dups:
         return
     if msgtype == 'start':
-        if src in dir_data or src in working or src in dups:
+        if src in dir_data or src in working:
             dups[ src ] = parts
             return
         working[ src ] = { 'start': ts,
                            'num_src_dirs': 0,
                            'num_src_files': 0,
-                           'num_src_symlinks': 0,
+#                           'num_src_symlinks': 0,
                            'num_tgt_dirs': 0,
                            'num_tgt_files': 0,
-                           'num_tgt_symlinks': 0,
+#                           'num_tgt_symlinks': 0,
                            'srctot': 0,
                            'end': 0,
                            'elapsed': 999999,
@@ -78,10 +78,10 @@ def process_syncdir_stats( rec, syncdir_data ):
         dir_data[ src ] = working[ src ]
     elif msgtype == 'info':
         working[ src ] [ 'srctot' ] = 0
-        for k in [ 'num_src_dirs', 'num_src_files', 'num_src_symlinks' ]:
+        for k in [ 'num_src_dirs', 'num_src_files' ]:
             working[ src ][ k ] = rec[ k ]
             working[ src ] [ 'srctot' ] += rec[ k ]
-        for k in [ 'num_tgt_dirs', 'num_tgt_files', 'num_tgt_symlinks' ]:
+        for k in [ 'num_tgt_dirs', 'num_tgt_files' ]:
             working[ src ][ k ] = rec[ k ]
     elif msgtype == 'end':
         working[ src ][ 'end' ] = ts
@@ -143,11 +143,10 @@ def print_syncdir_summary( args, syncdir_data ):
             print( k, file=f )
     # Dir Data
     syncdir_outfile = args.infile + '.syncdir_data'
-    outfmt = '{elapsed:>7} {nsd:>7} {nsf:>7} {nsl:>7} {srctot:>7} {src}'
-    outkeys = (
-             'elapsed', 'nsd', 'nsf', 'nsl', 'ntd', 'ntf', 'ntl', 'srctot', 'src' )
-    hdrs1 = ('Elap',    'SRC', 'SRC', 'SRC', 'TGT', 'TGT', 'TGT', 'Total',  'Key' )
-    hdrs2 = ('Secs',    'Dir', 'Reg', 'Lnk', 'Dir', 'Reg', 'Lnk', 'Total',  'SrcDir' )
+    outfmt = '{elapsed:>7} {nsd:>7} {nsf:>7} {srctot:>7} {src}'
+    outkeys = ( 'elapsed', 'nsd', 'nsf', 'srctot', 'src' )
+    hdrs1   = ( 'Elap',    'SRC', 'SRC', 'SRC',    'Key' )
+    hdrs2   = ( 'Secs',    'Dir', 'Reg', 'Total',  'SrcDir' )
     with open( syncdir_outfile, 'w' ) as f:
         print( outfmt.format( **( dict( zip( outkeys, hdrs1 ) ) ) ), file=f )
         print( outfmt.format( **( dict( zip( outkeys, hdrs2 ) ) ) ), file=f )
@@ -155,12 +154,8 @@ def print_syncdir_summary( args, syncdir_data ):
            print( outfmt.format( elapsed = d[ 'elapsed' ],
                           nsd = d[ 'num_src_dirs' ],
                           nsf = d[ 'num_src_files' ],
-                          nsl = d[ 'num_src_symlinks' ],
-                          ntd = d[ 'num_tgt_dirs' ],
-                          ntf = d[ 'num_tgt_files' ],
-                          ntl = d[ 'num_tgt_symlinks' ],
-                          src = k,
-                          srctot = d[ 'srctot' ] ), file=f )
+                          srctot = d[ 'srctot' ],
+                          src = k ), file=f )
 
 
 def run( args ):
