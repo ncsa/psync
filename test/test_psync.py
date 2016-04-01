@@ -80,7 +80,7 @@ def get_redis_logs():
 
 def get_task_errors():
     """ def get_task_errors():
-        Return list of warnings and errors from redis logs
+        Return list of warnings and errors from psync tasks
     """
     logmsgs = get_redis_logs()
     errors = []
@@ -127,7 +127,7 @@ def in_sync( src, tgt ):
     """
     rv = False
     cmd = [ os.environ[ 'PYLUTRSYNCPATH' ] ]
-    opts = { '--timeout': 20 }
+    opts = { '--timeout': 60 }
     args = [ '-nirlHAtpog', '--specials' ]
     args.append( '{0}/'.format( src ) )
     args.append( '{0}/'.format( tgt ) )
@@ -158,7 +158,7 @@ def test_full_sync( testdir ):
     #pprint.pprint( src )
     #pprint.pprint( tgt )
     psync.sync_dir.delay( src, tgt, psyncopts, rsyncopts )
-    assert wait_for( psync_is_complete, max_seconds=20 )
+    assert wait_for( psync_is_complete, max_seconds=60 )
     assert error_free_sync()
 
     # TODO ?? check RMQ for errors ??

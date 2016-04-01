@@ -6,6 +6,7 @@ configfile="${BASH_SOURCE%/*}/../config/bashrc"
   exit 1
 }
 source "$configfile"
+export PYTHONPATH=${PYTHONPATH}:$PSYNCBASEDIR/bin
 
 cleanup=""
 if [[ -r "$PSYNCVENVDIR/bin/activate" ]]; then

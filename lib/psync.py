@@ -286,10 +286,9 @@ def file_sync( src, tgt, psyncopts, rsyncopts ):
     :return: None
     """
     if src.nlink > 1:
-        # TODO - all src files having numlinks > 1 
-        #        should be enqueue'd to HARDLINK QUEUE
-        # TODO - can we call sync_file directly (without an apply or apply_async)?
-        sync_file.apply( ( src, tgt, rsyncopts ) )
+        #TODO - write sync_hardlink , will use a named queue (defined in the celery_config.py)
+        #sync_hardlink.apply_async( ( src, tgt, rsyncopts ) )
+        sync_file.apply_async( ( src, tgt, rsyncopts ) )
     else:
         sync_file.apply_async( ( src, tgt, rsyncopts ) )
 
