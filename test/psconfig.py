@@ -1,12 +1,13 @@
 SOURCE_DIR = 'tmp/source'
 DEST_DIR = 'tmp/dest'
-NUM_OBJECTS = 1000
+NUM_OBJECTS = 10000
 MAX_FILE_SIZE = 4*1024
 SEED = 1
 
 # Weights for how often each type is created
 FILE_WEIGHT     = 4
-DIR_WEIGHT      = 1
+#DIR_WEIGHT      = 1
+DIR_WEIGHT      = 2
 SYMLINK_WEIGHT  = 1
 FIFO_WEIGHT     = 1
 SOCKET_WEIGHT   = 1
