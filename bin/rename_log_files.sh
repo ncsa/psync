@@ -22,7 +22,7 @@ testfn="$dn/${fn}.INFO"
   exit 1
 }
 
-ts=$( $PSYNCBASEDIR/test/catcbor.py --ini -H 1 $fullpath \
+ts=$( $PSYNCBASEDIR/bin/catcbor.py --ini -H 1 $fullpath \
 | awk '$1 == "ts" {print $NF}' )
 new_f_pfx="${ts}.${fn}"
 

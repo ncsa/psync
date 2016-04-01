@@ -116,7 +116,7 @@ It is also assumed that psync is running on a cluster.
   * `/path/to/psync/bin/workers_status`
   * `/path/to/psync/bin/workers_status -i`
 * Check all psync logs, redis logs, rabbitmq logs, worker logs for errors
-  * `path/to/psync/test/progress_report.sh`
+  * `path/to/psync/bin/progress_report.sh`
 
 ## Interrupting A Sync In Progress
 * Graceful (allow running processes to finish)
@@ -153,7 +153,7 @@ A psync is finished when all of the following are true:
 * To keep logs from separate psync runs organized, use the following command
   to rename all logs from a given run by adding the start timestamp as
   a filename prefix:
-  * `/path/to/psync/test/rename_log_files.sh /path/to/log_file.INFO`
+  * `/path/to/psync/bin/rename_log_files.sh /path/to/log_file.INFO`
 
 # Sample Setup
 In the `sample` directory, there are some files that may understand the
@@ -198,10 +198,10 @@ A sample run might look something like this:
     $PSYNCLOGDIR/psync_mnt_a"`
   * Monitor progress
     * `cd $PSYNCLOGDIR`
-    * `$PSYNCBASEDIR/test/progress_report.sh`
+    * `$PSYNCBASEDIR/bin/progress_report.sh`
 * Shutdown all services
   * `pcmd -f $WCOLLREDIS "$PSYNCBASEDIR/bin/workers_shutdown"`
   * `pcmd -f $WCOLLREDIS "$PSYNCBASEDIR/bin/redis_psync stop"`
   * `pcmd -f $WCOLLRMQ "$PSYNCBASEDIR/bin/rabbitmq_psync stop"`
 * Rename log files for this run
-  * `$PSYNCBASEDIR/test/rename_log_files.sh $PSYNCLOGDIR/psync_mnt_a.INFO`
+  * `$PSYNCBASEDIR/bin/rename_log_files.sh $PSYNCLOGDIR/psync_mnt_a.INFO`

@@ -33,7 +33,7 @@ WARNINGFILE=${pfx}.WARNING
 echo
 echo PSYNC ERRORS
 if [[ -f $ERRFILE ]] ; then
-    $PYTHON $PSYNCBASEDIR/test/parse_psync_errlog.py -n $ERRFILE
+    $PYTHON $PSYNCBASEDIR/bin/parse_psync_errlog.py -n $ERRFILE
 else
     echo "  n/a"
 fi
@@ -41,14 +41,14 @@ fi
 echo
 echo PSYNC WORKER ERRORS
 find $PSYNCVARDIR/psync_service/ -name '*.log' \
-| xargs $PYTHON $PSYNCBASEDIR/test/parse_worker_errlog.py \
+| xargs $PYTHON $PSYNCBASEDIR/bin/parse_worker_errlog.py \
 >$tmp2
 head -n -4 $tmp2 > $tmp
 dumptmp
 
 echo
 echo REDIS ERRORS
-$PSYNCBASEDIR/test/parse_redis_log.sh >$tmp
+$PSYNCBASEDIR/bin/parse_redis_log.sh >$tmp
 dumptmp
 
 echo
@@ -58,7 +58,7 @@ ls -1sh ${pfx}*
 echo
 echo WARNINGS
 if [[ -f $WARNINGFILE ]] ; then
-    $PSYNCBASEDIR/test/parse_psync_warnlog.py $WARNINGFILE
+    $PSYNCBASEDIR/bin/parse_psync_warnlog.py $WARNINGFILE
 else
     echo "  n/a"
 fi
@@ -67,7 +67,7 @@ fi
 # tmp = progress info
 # tmp2 = duplicate dirs
 # The $@ allows to pass "-i <num_inodes>" to parse_infolog
-$PSYNCBASEDIR/test/parse_psync_infolog.py $@ $LOGFILE > $tmp 2>$tmp2
+$PSYNCBASEDIR/bin/parse_psync_infolog.py $@ $LOGFILE > $tmp 2>$tmp2
 
 echo
 echo "5 LONGEST RUNNING TASKS"

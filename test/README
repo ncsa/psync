@@ -1,9 +1,0 @@
-Psync functional tests designed around pytest (https://pytest.org).
-
-To run functional tests:
-
-1. Create/Edit config file
-     $PSYNCHOME/config/bashrc
-2. Run tests
-     cd $PSYNCHOME/config
-     ./runtest
