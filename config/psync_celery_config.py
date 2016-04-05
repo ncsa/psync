@@ -2,7 +2,8 @@
 
 CELERY_ACCEPT_CONTENT = ['pickle']
 
-CELERYD_PREFETCH_MULTIPLIER = 4
+#CELERYD_PREFETCH_MULTIPLIER = 4
+CELERYD_PREFETCH_MULTIPLIER = 1
 
 # Queues & Routes
 # Note: default queue is "celery"

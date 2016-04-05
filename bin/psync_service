@@ -357,6 +357,15 @@ case "$1" in
         start_workers
     ;;
 
+    start_hardlinker)
+        check_dev_null
+        check_paths
+        CELERYD_NODES=psync_hardlinker
+        CELERYD_OPTS="${CELERYD_OPTS_HARDLINKER}"
+        CELERYD_LOG_LEVEL=DEBUG
+        start_workers
+    ;;
+
     stop)
         check_dev_null
         check_paths

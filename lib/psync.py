@@ -187,6 +187,56 @@ def sync_file( src, tgt, rsyncopts ):
     logr.info( **msg_parts )
 
 
+@app.task( base=Psync_Task )
+def sync_hardlink( src, tgt, rsyncopts ):
+    """
+    Celery task, sync a file with multiple hardlinks
+    :param src FSItem: src file
+    :param tgt FSItem: tgt file
+    :param rsyncopts dict: options passed to pylut.syncdir & pylut.syncfile
+    :return: None
+    """
+    basemod = psynctmpdir
+    rsyncopts.update( tmpbase = os.path.join( tgt.mountpoint, basemod ),
+                      keeptmp = True,
+                    )
+    logr.info( synctype = 'SYNCHARDLINK',
+               msgtype  = 'start',
+               src      = str( src ),
+               tgt      = str( tgt ),
+               size     = src.size )
+    try:
+        tmpfn, action_type = pylut.syncfile( src, tgt, **rsyncopts )
+    except ( pylut.PylutError ) as e:
+        logr.warning( synctype = 'SYNCHARDLINK',
+                      msgtype  = 'error',
+                      src      = str( src ),
+                      tgt      = str( tgt ),
+                      error    = str( e ) )
+        return
+    msg_parts = {}
+    if tmpfn.nlink < 3 and rsyncopts[ 'pre_checksums' ]:
+        msg_parts.update( src_chksum = src.checksum(),
+                          tgt_chksum = tgt.checksum() )
+    sync_action = 'None'
+    if action_type[ 'data_copy' ]:
+        sync_action = 'data_copy'
+        if rsyncopts[ 'post_checksums' ] and not rsyncopts[ 'pre_checksums' ]:
+            # do post checksums only if pre_checksums haven't done it already
+            msg_parts.update( src_chksum = src.checksum(),
+                              tgt_chksum = tgt.checksum() )
+    elif action_type[ 'meta_update' ]:
+        sync_action = 'meta_update'
+    #TODO-insert dir mtime fix here
+    #sync_dir_mtime( src.parent, tgt.parent, rsyncopts )
+    msg_parts.update( synctype = 'SYNCHARDLINK',
+                      msgtype  = 'end',
+                      src = str( src ),
+                      tgt = str( tgt ),
+                      action = str( sync_action ) )
+    logr.info( **msg_parts )
+
+
 def dir_scan( dirobj, psyncopts ):
     """
     Get directory contents
@@ -287,8 +337,8 @@ def file_sync( src, tgt, psyncopts, rsyncopts ):
     """
     if src.nlink > 1:
         #TODO - write sync_hardlink , will use a named queue (defined in the celery_config.py)
-        #sync_hardlink.apply_async( ( src, tgt, rsyncopts ) )
-        sync_file.apply_async( ( src, tgt, rsyncopts ) )
+        sync_hardlink.apply_async( ( src, tgt, rsyncopts ) )
+        #sync_file.apply_async( ( src, tgt, rsyncopts ) )
     else:
         sync_file.apply_async( ( src, tgt, rsyncopts ) )
 

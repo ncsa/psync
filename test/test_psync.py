@@ -19,19 +19,23 @@ psyncopts = dict( minsecs = 0,
                   pre_checksums = False
                 )
 
+def _truncate( fn ):
+    with open( str( fn ), 'wb' ) as fh:
+        pass
 
 def wait_for( func, max_seconds=10, pause=1 ):
     """ def wait_for
         Wait for up to max_seconds for func to return True
-        If func, returns True within time alloted, return True
+        If func returns True within time alloted, return True
         Otherwise, return False
+        func must return a boolean value (others might work, but behavior is undefined)
     """
     rv = False
     start = time.time()
     diff = 0
     while rv != True and diff < max_seconds:
         rv = func()
-        if rv != True and rv != False:
+        if rv is not True and rv is not False:
             raise UserWarning( "func '{0}' did not return a boolean value".format( func ) )
         time.sleep( pause )
         diff = time.time() - start
@@ -73,46 +77,49 @@ def get_redis_logs():
     for m in rq.qpop_all():
         msgdict = cbor.loads( m )
         logmsgs[ msgdict[ 'sev' ] ].append( m )
-    for k in [ 'WARNING', 'ERROR' ]:
-        pprint.pprint( logmsgs[ k ] )
+#    for k in [ 'WARNING', 'ERROR' ]:
+#        pprint.pprint( logmsgs[ k ] )
     return logmsgs
 
 
 def get_task_errors():
-    """ def get_task_errors():
-        Return list of warnings and errors from psync tasks
+    """
+    Return list of warnings and errors from psync tasks
     """
     logmsgs = get_redis_logs()
     errors = []
     for k in [ 'WARNING', 'ERROR' ]:
         if len( logmsgs[ k ] ) > 0:
-            pprint.pprint( logmsgs[ k ] )
+#            pprint.pprint( logmsgs[ k ] )
             errors.append( pprint.pformat( logmsgs[ k ] ) )
     return errors
 
 
 def get_worker_errors():
-    """ def get_worker_errors():
-        Return list of errors, if any, from celery workers
+    """
+    Return list of errors, if any, from celery workers
     """
     logfiles = []
     worker_log_dir = os.path.join( os.environ[ 'PSYNCVARDIR' ], 'psync_service' )
     for root, dirs, files in os.walk( worker_log_dir ):
         logfiles.extend( [ os.path.join( root, f ) for f in files if f.endswith( '.log' ) ] )
-    #lines = parse_worker_errlog.parse_files( logfiles )
-    return parse_worker_errlog.parse_files( logfiles )
+    errors = parse_worker_errlog.parse_files( logfiles )
+    for f in logfiles:
+        _truncate( f )
+    return errors
 
 
 def error_free_sync():
-    """ def error_free_sync():
-        Return True if no errors or warnings produced, False otherwise
+    """
+    Return True if no errors or warnings produced, False otherwise
     """
     rv=True
     worker_errs = get_worker_errors()
     if len( worker_errs ) > 0:
         rv = False
         print( 'Worker Errors:' )
-        pprint.pprint( worker_errs )
+        args = parse_worker_errlog.process_cmdline()
+        print( parse_worker_errlog.format_output( worker_errs, args ) )
     task_errs = get_task_errors()
     if len( task_errs ) > 0:
         rv = False
@@ -122,8 +129,8 @@ def error_free_sync():
     
 
 def in_sync( src, tgt ):
-    """ def in_sync( src, tgt ):
-        Return True if rsync finds no differences, False otherwise
+    """
+    Return True if rsync finds no differences, False otherwise
     """
     rv = False
     cmd = [ os.environ[ 'PYLUTRSYNCPATH' ] ]
@@ -148,17 +155,15 @@ def in_sync( src, tgt ):
     return rv
 
 
-def test_full_sync( testdir ):
-    # testdir is a module reference to the pstestdir module
-    #pprint.pprint( testdir.objects )
-    #pprint.pprint( testdir.files )
+def test_sync_no_hardlinks( testdir ):
+    # don't create hardlinks
+    testdir.config.HARDLINK_WEIGHT=0
+    testdir.reset()
     # run psync from testdir.source to testdir.target
-    src = fsitem.FSItem( testdir.source )
-    tgt = fsitem.FSItem( testdir.target )
-    #pprint.pprint( src )
-    #pprint.pprint( tgt )
+    src = fsitem.FSItem( testdir.config.SOURCE_DIR )
+    tgt = fsitem.FSItem( testdir.config.DEST_DIR )
     psync.sync_dir.delay( src, tgt, psyncopts, rsyncopts )
-    assert wait_for( psync_is_complete, max_seconds=60 )
+    assert wait_for( psync_is_complete, max_seconds=6000 )
     assert error_free_sync()
 
     # TODO ?? check RMQ for errors ??
@@ -168,4 +173,24 @@ def test_full_sync( testdir ):
     tgt.update()
     # verify source matches target
     assert in_sync( src, tgt )
+
+
+#def test_full_sync( testdir ):
+#    # ensure psconfig defaults
+#    testdir.reset_config()
+#    testdir.reset()
+#    # run psync from testdir.source to testdir.target
+#    src = fsitem.FSItem( testdir.config.SOURCE_DIR )
+#    tgt = fsitem.FSItem( testdir.config.DEST_DIR )
+#    psync.sync_dir.delay( src, tgt, psyncopts, rsyncopts )
+#    assert wait_for( psync_is_complete, max_seconds=6000 )
+#    assert error_free_sync()
+#
+#    # TODO ?? check RMQ for errors ??
+#
+#    # clear any cached meta data
+#    src.update()
+#    tgt.update()
+#    # verify source matches target
+#    assert in_sync( src, tgt )
 

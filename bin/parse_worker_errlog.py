@@ -18,10 +18,12 @@ log_msg_start = re.compile( '\[[\d-]{10} [\d:,]{13} ([A-Z]+)/([a-zA-Z]+)\] ')
 #    '|' 'Got shutdown from remote'
 ignore_msgs = re.compile( 
     'CDeprecationWarning'
-    '|' 'worker.@(nid|ie)\d+ ready.$'
+    '|' '@(nid|ie)\d+ ready.$'
     '|' "OSError\(17, 'File exists'\)"
     '|' "Got shutdown from remote"
     '|' "Can't shrink pool"
+    '|' " (INFO|DEBUG)/MainProcess\]"
+    '|' "clocks are out of sync"
     )
 
 # known exceptions
@@ -109,6 +111,39 @@ def parse_files( filelist ):
     return errors
 
 
+def format_output( errors, args ):
+    output = []
+    total_error_count = 0
+    err_indices = { i: e for i, e in enumerate( errors, start=1) }
+    if args.show > 0:
+        e = err_indices[ args.show ]
+        qty = errors[e][ 'count' ]
+        lines = errors[e][ 'data' ]
+        output.append( 'Error # {0:02d}  Qty:{1}'.format( args.show, qty ) )
+        output.append( '='*50 )
+        output.append( e )
+        output.append( '-'*50 )
+        output.append( ''.join( lines ) )
+        output.append( '' )
+    else:
+        for i, e in err_indices.iteritems():
+            qty = errors[e][ 'count' ]
+            total_error_count += qty
+            output.append( 'Error # {0:02d}  Qty:{1}'.format( i, qty ) )
+            output.append( '='*20 )
+            output.append( e )
+            if args.showall:
+                lines = errors[e][ 'data' ]
+                output.append( '-'*50 )
+                output.append( ''.join( lines ) )
+            output.append( "" )
+        output.append( "" )
+        output.append( '='*20 )
+        output.append( "Total Error Count: {0}".format( total_error_count ) )
+        output.append( '='*20 )
+    return '\n'.join( output )
+
+
 if __name__ == "__main__":
     args = process_cmdline()
     if args.picklefile and os.path.exists( args.picklefile ):
@@ -116,34 +151,33 @@ if __name__ == "__main__":
             errors = pickle.load( f )
     else:
         errors = parse_files( args.files )
-    total_error_count = 0
-    err_indices = { i: e for i, e in enumerate( errors, start=1) }
-    if args.show > 0:
-        e = err_indices[ args.show ]
-        qty = errors[e][ 'count' ]
-        lines = errors[e][ 'data' ]
-        print( 'Error # {0:02d}  Qty:{1}'.format( args.show, qty ) )
-        print( '='*50 )
-        print( e )
-        print( '-'*50 )
-        print( ''.join( lines ) )
-        print( '' )
-    else:
-        for i, e in err_indices.iteritems():
-            qty = errors[e][ 'count' ]
-            total_error_count += qty
-            print( 'Error # {0:02d}  Qty:{1}'.format( i, qty ) )
-            print( '='*20 )
-            print( e )
-            if args.showall:
-                lines = errors[e][ 'data' ]
-                print( '-'*50 )
-                print( ''.join( lines ) )
-            print( "" )
-        print( "" )
-        print( '='*20 )
-        print( "Total Error Count: {0}".format( total_error_count ) )
-        print( '='*20 )
+    print( format_ooutput( errors, args ) )
+#    if args.show > 0:
+#        e = err_indices[ args.show ]
+#        qty = errors[e][ 'count' ]
+#        lines = errors[e][ 'data' ]
+#        print( 'Error # {0:02d}  Qty:{1}'.format( args.show, qty ) )
+#        print( '='*50 )
+#        print( e )
+#        print( '-'*50 )
+#        print( ''.join( lines ) )
+#        print( '' )
+#    else:
+#        for i, e in err_indices.iteritems():
+#            qty = errors[e][ 'count' ]
+#            total_error_count += qty
+#            print( 'Error # {0:02d}  Qty:{1}'.format( i, qty ) )
+#            print( '='*20 )
+#            print( e )
+#            if args.showall:
+#                lines = errors[e][ 'data' ]
+#                print( '-'*50 )
+#                print( ''.join( lines ) )
+#            print( "" )
+#        print( "" )
+#        print( '='*20 )
+#        print( "Total Error Count: {0}".format( total_error_count ) )
+#        print( '='*20 )
     if args.picklefile and not os.path.exists( args.picklefile ):
         with open( args.picklefile, 'wb' ) as f:
             pickle.dump( errors, f )
