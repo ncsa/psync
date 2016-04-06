@@ -19,6 +19,7 @@ PRG="$( basename $0 )"
 RMQPORT=5672
 RMQSERVER="$RABBITMQ_HOME/sbin/rabbitmq-server"
 RMQCTL="$RABBITMQ_HOME/sbin/rabbitmqctl"
+RMQPLUGINS="$RABBITMQ_HOME/sbin/rabbitmq-plugins"
 RMQ_BIND_IP=""
 
 export RABBITMQ_MNESIA_BASE="$PSYNCVARDIR/$PRG/mnesia"
@@ -101,11 +102,13 @@ function rm_broker_url {
 }
 
 
-COMMANDS=( start stop status cmd )
+COMMANDS=( start stop status cmd plugins )
 function usage {
     echo "Usage: $PRG <command>"
     echo "    where <command> is one of:"
     echo "    ${COMMANDS[@]}"
+    echo "Note: 'cmd' allows sending any arbitrary rabbitmqctl command"
+    echo "Note: 'plugins' allows sending any arbitrary rabbitmq-plugins command"
 }
 
 
@@ -153,6 +156,10 @@ case "$1" in
         get_bind_ip
         save_rmq_url || croak "Unable to save rmq url to file"
         save_broker_url || croak "Unable to save broker url to file"
+        ;;
+    plugins)
+        shift
+        $RMQPLUGINS $*
         ;;
     *)
         usage
