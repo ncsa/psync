@@ -123,8 +123,33 @@ def sync_dir( src, tgt, psyncopts, rsyncopts ):
         newtgt = tgt_files[ fname ]
         file_sync( newsrc, newtgt, psyncopts, rsyncopts )
     # sync the (local) dir to set metadata
-    dir_sync_meta( src, tgt, psyncopts, rsyncopts )
+    dir_sync_meta.apply_async( src, tgt, psyncopts, rsyncopts )
     logr.info( synctype = 'SYNCDIR',
+               msgtype  = 'end',
+               src      = str( src ),
+               tgt      = str( tgt ) )
+
+
+@app.task( base=Psync_Task, queue='directories' )
+def dir_sync_meta( src, tgt, psyncopts, rsyncopts ):
+    """
+    Sync metadata only of a directory
+    :param src FSItem: src directory
+    :param tgt FSItem: tgt directory
+    :param psyncopts dict: options for adjusting psync behavior
+    :param rsyncopts dict: options passed to pylut.syncdir
+    :return: None
+    """
+    logr.info( synctype = 'SYNCDIRMETA',
+               msgtype  = 'start',
+               src      = str( src ),
+               tgt      = str( tgt ) )
+    dirsyncopts = {}
+    for k in ( 'syncowner', 'syncgroup', 'syncperms', 'synctimes' ):
+        dirsyncopts[ k ] = rsyncopts[ k ]
+    #TODO - add error handling for pylut.syncdir
+    ( output, errput ) = pylut.syncdir( src, tgt, **dirsyncopts )
+    logr.info( synctype = 'SYNCDIRMETA',
                msgtype  = 'end',
                src      = str( src ),
                tgt      = str( tgt ) )
@@ -146,59 +171,38 @@ def sync_file( src, tgt, rsyncopts ):
     :param rsyncopts dict: options passed to pylut.syncdir & pylut.syncfile
     :return: None
     """
-    rsyncopts.update( tmpbase = os.path.join( tgt.mountpoint, psynctmpdir ),
-                      keeptmp = True,
-                    )
-    logr.info( synctype = 'SYNCFILE',
-               msgtype  = 'start',
-               src      = str( src ),
-               tgt      = str( tgt ),
-               size     = src.size )
-    try:
-        tmpfn, action_type = pylut.syncfile( src, tgt, **rsyncopts )
-    except ( pylut.PylutError ) as e:
-        logr.warning( synctype = 'SYNCFILE',
-                      msgtype  = 'error',
-                      src      = str( src ),
-                      tgt      = str( tgt ),
-                      error    = str( e ) )
-        return
-    msg_parts = {}
-    if rsyncopts[ 'pre_checksums' ]:
-        msg_parts.update( src_chksum = src.checksum(),
-                          tgt_chksum = tgt.checksum() )
-    sync_action = 'None'
-    if action_type[ 'data_copy' ]:
-        sync_action = 'data_copy'
-        if rsyncopts[ 'post_checksums' ] and not rsyncopts[ 'pre_checksums' ]:
-            # do post checksums only if pre_checksums haven't done it already
-            msg_parts.update( src_chksum = src.checksum(),
-                              tgt_chksum = tgt.checksum() )
-    elif action_type[ 'meta_update' ]:
-        sync_action = 'meta_update'
-    #TODO-insert dir mtime fix here
-    #sync_dir_mtime( src.parent, tgt.parent, rsyncopts )
-    msg_parts.update( synctype = 'SYNCFILE',
-                      msgtype  = 'end',
-                      src = str( src ),
-                      tgt = str( tgt ),
-                      action = sync_action )
-    logr.info( **msg_parts )
+    _sync_a_file( src, tgt, rsyncopts, 'FILE' )
 
 
 @app.task( base=Psync_Task, queue='hardlinks' )
 def sync_hardlink( src, tgt, rsyncopts ):
     """
     Celery task, sync a file with multiple hardlinks
+    This is identical to sync_file, but has to be a separate function so tasks
+    can be assigned on a special named queue.
     :param src FSItem: src file
     :param tgt FSItem: tgt file
     :param rsyncopts dict: options passed to pylut.syncdir & pylut.syncfile
     :return: None
     """
+    _sync_a_file( src, tgt, rsyncopts, 'HARDLINK' )
+
+
+def _sync_a_file( src, tgt, rsyncopts, ftype ):
+    """
+    Common code for syncing any file.  This function will be called by one of
+    the sync_file or sync_hardlink Celery Task functions.
+    :param src FSItem: src file
+    :param tgt FSItem: tgt file
+    :param rsyncopts dict: options passed to pylut.syncdir & pylut.syncfile
+    :param ftype string: file type that is being sync'd (ie: file or hardlink)
+    :return: None
+    """
     rsyncopts.update( tmpbase = os.path.join( tgt.mountpoint, psynctmpdir ),
                       keeptmp = True,
                     )
-    logr.info( synctype = 'SYNCHARDLINK',
+    synctype = 'SYNC' + ftype.upper()
+    logr.info( synctype = synctype,
                msgtype  = 'start',
                src      = str( src ),
                tgt      = str( tgt ),
@@ -206,7 +210,7 @@ def sync_hardlink( src, tgt, rsyncopts ):
     try:
         tmpfn, action_type = pylut.syncfile( src, tgt, **rsyncopts )
     except ( pylut.PylutError ) as e:
-        logr.warning( synctype = 'SYNCHARDLINK',
+        logr.warning( synctype = synctype,
                       msgtype  = 'error',
                       src      = str( src ),
                       tgt      = str( tgt ),
@@ -225,9 +229,7 @@ def sync_hardlink( src, tgt, rsyncopts ):
                               tgt_chksum = tgt.checksum() )
     elif action_type[ 'meta_update' ]:
         sync_action = 'meta_update'
-    #TODO-insert dir mtime fix here
-    #sync_dir_mtime( src.parent, tgt.parent, rsyncopts )
-    msg_parts.update( synctype = 'SYNCHARDLINK',
+    msg_parts.update( synctype = synctype,
                       msgtype  = 'end',
                       src = str( src ),
                       tgt = str( tgt ),
@@ -307,22 +309,6 @@ def rm_dir( path, tmpbase ):
                tgt      = tgt )
 
 
-def dir_sync_meta( src, tgt, psyncopts, rsyncopts ):
-    """
-    Sync metadata only of a directory
-    :param src FSItem: src directory
-    :param tgt FSItem: tgt directory
-    :param psyncopts dict: options for adjusting psync behavior
-    :param rsyncopts dict: options passed to pylut.syncdir
-    :return: None
-    """
-    #TODO - add error handling for pylut.syncdir
-    dirsyncopts = {}
-    for k in ( 'syncowner', 'syncgroup', 'syncperms', 'synctimes' ):
-        dirsyncopts[ k ] = rsyncopts[ k ]
-    ( output, errput ) = pylut.syncdir( src, tgt, **dirsyncopts )
-
-
 def file_sync( src, tgt, psyncopts, rsyncopts ):
     """
     Wrap details of file sync.
@@ -334,16 +320,9 @@ def file_sync( src, tgt, psyncopts, rsyncopts ):
     :return: None
     """
     if src.nlink > 1:
-        #TODO - write sync_hardlink , will use a named queue (defined in the celery_config.py)
         sync_hardlink.apply_async( ( src, tgt, rsyncopts ) )
-        #sync_file.apply_async( ( src, tgt, rsyncopts ) )
     else:
         sync_file.apply_async( ( src, tgt, rsyncopts ) )
-
-
-def sync_dir_mtime( src, tgt, syncopts ):
-    #pylut.dir_sync( src, tgt, *syncopts )
-    pass
 
 
 if __name__ == '__main__':
