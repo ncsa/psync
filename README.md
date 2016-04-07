@@ -12,8 +12,6 @@ parallelization.
 * [ Python Virtual Env ] ( http://docs.python-guide.org/en/latest/dev/virtualenvs/ )
 
 # Notes
-1. All commands in this readme are assumed to be run as root unless otherwise
-   specified.
 1. This version depends on [ pylut ] (https://github.com/ncsa/pylut), (included
    as a submodule) thus it is specific to Lustre.  Psync can be made more
    generic by replacing the dependency on Pylut with any other library that
@@ -25,7 +23,6 @@ parallelization.
    are specific to other filesystem types (to take advantage of filesystem
    specific optimizations) and thus these could be loaded if the source and
    target filesystems are both of the specific type.
-
 
 # Installation
 * Install rabbitmq
@@ -46,21 +43,21 @@ parallelization.
     accessible place (this will be addressed in the psync config).
   * This example assumes `$HOME` is sufficient (where the current user is a 
     regular user, **not root**)
-  * `cd ~`  *non-root*
+  * `cd ~` 
 * Get psync
-  * `git clone https://github.com/ncsa/psync.git` *non-root*
+  * `git clone https://github.com/ncsa/psync.git`
   * Update pylut (included submodule)
-    * `cd psync` *non-root*
-    * `git submodule init` *non-root*
-    * `git submodule update` *non-root*
+    * `cd psync`
+    * `git submodule init`
+    * `git submodule update`
 * Create a virtualenv for psync
-  * `virtualenv venv` *non-root*
-  * `source venv/bin/activate` *non-root*
+  * `virtualenv venv`
+  * `source venv/bin/activate`
 * Install the additional python required libraries
-  * `pip install -r requirements.txt` *non-root*
+  * `pip install -r requirements.txt`
 * Edit the config file for your environment
-  * `cp config/bashrc.template config/bashrc` *non-root*
-  * `vim config/bashrc` *non-root*
+  * `cp config/bashrc.template config/bashrc`
+  * `vim config/bashrc`
 * Set root permissions on psync config (necessary when celery is run as root)
   * `chown root:root config/psync_service.config`
   * `chmod 400 config/psync_service.config`
