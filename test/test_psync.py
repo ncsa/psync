@@ -77,35 +77,42 @@ def get_redis_logs():
     for m in rq.qpop_all():
         msgdict = cbor.loads( m )
         logmsgs[ msgdict[ 'sev' ] ].append( m )
-#    for k in [ 'WARNING', 'ERROR' ]:
-#        pprint.pprint( logmsgs[ k ] )
     return logmsgs
 
 
-def get_task_errors():
+def get_task_errors( cleanup=False ):
     """
     Return list of warnings and errors from psync tasks
     """
-    logmsgs = get_redis_logs()
+    outfn = 'task.logs'
     errors = []
-    for k in [ 'WARNING', 'ERROR' ]:
-        if len( logmsgs[ k ] ) > 0:
-#            pprint.pprint( logmsgs[ k ] )
-            errors.append( pprint.pformat( logmsgs[ k ] ) )
+    logmsgs = get_redis_logs()
+    if cleanup:
+        _truncate( outfn )
+    else:
+        with open( outfn, 'w' ) as fh:
+            for k in logmsgs:
+                fh.write( k )
+                fh.writelines( logmsgs[ k ] )
+                if k in [ 'WARNING', 'ERROR' ]:
+                    errors.extend( logmsgs[ k ] )
     return errors
 
 
-def get_worker_errors():
+def get_worker_errors( cleanup=False ):
     """
     Return list of errors, if any, from celery workers
     """
     logfiles = []
+    errors = []
     worker_log_dir = os.path.join( os.environ[ 'PSYNCVARDIR' ], 'psync_service' )
     for root, dirs, files in os.walk( worker_log_dir ):
         logfiles.extend( [ os.path.join( root, f ) for f in files if f.endswith( '.log' ) ] )
-    errors = parse_worker_errlog.parse_files( logfiles )
-    for f in logfiles:
-        _truncate( f )
+    if cleanup:
+        for f in logfiles:
+            _truncate( f )
+    else:
+        errors = parse_worker_errlog.parse_files( logfiles )
     return errors
 
 
@@ -126,6 +133,15 @@ def error_free_sync():
         print( 'Task Errors:' )
         pprint.pprint( task_errs )
     return rv
+
+
+#TODO - this should probably be a fixture
+def cleanup():
+    """
+    Cleanup logs and anythign else
+    """
+    get_worker_errors( cleanup=True )
+    get_task_errors( cleanup=True )
     
 
 def in_sync( src, tgt ):
@@ -156,6 +172,7 @@ def in_sync( src, tgt ):
 
 
 def test_sync_no_hardlinks( testdir ):
+    cleanup()
     # don't create hardlinks
     testdir.config.HARDLINK_WEIGHT=0
     testdir.reset()
@@ -165,9 +182,7 @@ def test_sync_no_hardlinks( testdir ):
     psync.sync_dir.delay( src, tgt, psyncopts, rsyncopts )
     assert wait_for( psync_is_complete, max_seconds=6000 )
     assert error_free_sync()
-
     # TODO ?? check RMQ for errors ??
-
     # clear any cached meta data
     src.update()
     tgt.update()
@@ -175,22 +190,21 @@ def test_sync_no_hardlinks( testdir ):
     assert in_sync( src, tgt )
 
 
-#def test_full_sync( testdir ):
-#    # ensure psconfig defaults
-#    testdir.reset_config()
-#    testdir.reset()
-#    # run psync from testdir.source to testdir.target
-#    src = fsitem.FSItem( testdir.config.SOURCE_DIR )
-#    tgt = fsitem.FSItem( testdir.config.DEST_DIR )
-#    psync.sync_dir.delay( src, tgt, psyncopts, rsyncopts )
-#    assert wait_for( psync_is_complete, max_seconds=6000 )
-#    assert error_free_sync()
-#
-#    # TODO ?? check RMQ for errors ??
-#
-#    # clear any cached meta data
-#    src.update()
-#    tgt.update()
-#    # verify source matches target
-#    assert in_sync( src, tgt )
+def test_full_sync( testdir ):
+    cleanup()
+    # ensure psconfig defaults
+    testdir.reset_config()
+    testdir.reset()
+    # run psync from testdir.source to testdir.target
+    src = fsitem.FSItem( testdir.config.SOURCE_DIR )
+    tgt = fsitem.FSItem( testdir.config.DEST_DIR )
+    psync.sync_dir.delay( src, tgt, psyncopts, rsyncopts )
+    assert wait_for( psync_is_complete, max_seconds=6000 )
+    assert error_free_sync()
+    # TODO ?? check RMQ for errors ??
+    # clear any cached meta data
+    src.update()
+    tgt.update()
+    # verify source matches target
+    assert in_sync( src, tgt )
 

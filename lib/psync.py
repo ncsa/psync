@@ -146,8 +146,7 @@ def sync_file( src, tgt, rsyncopts ):
     :param rsyncopts dict: options passed to pylut.syncdir & pylut.syncfile
     :return: None
     """
-    basemod = psynctmpdir
-    rsyncopts.update( tmpbase = os.path.join( tgt.mountpoint, basemod ),
+    rsyncopts.update( tmpbase = os.path.join( tgt.mountpoint, psynctmpdir ),
                       keeptmp = True,
                     )
     logr.info( synctype = 'SYNCFILE',
@@ -187,7 +186,7 @@ def sync_file( src, tgt, rsyncopts ):
     logr.info( **msg_parts )
 
 
-@app.task( base=Psync_Task )
+@app.task( base=Psync_Task, queue='hardlinks' )
 def sync_hardlink( src, tgt, rsyncopts ):
     """
     Celery task, sync a file with multiple hardlinks
@@ -196,8 +195,7 @@ def sync_hardlink( src, tgt, rsyncopts ):
     :param rsyncopts dict: options passed to pylut.syncdir & pylut.syncfile
     :return: None
     """
-    basemod = psynctmpdir
-    rsyncopts.update( tmpbase = os.path.join( tgt.mountpoint, basemod ),
+    rsyncopts.update( tmpbase = os.path.join( tgt.mountpoint, psynctmpdir ),
                       keeptmp = True,
                     )
     logr.info( synctype = 'SYNCHARDLINK',

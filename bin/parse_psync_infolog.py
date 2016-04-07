@@ -62,7 +62,7 @@ def process_syncdir_stats( rec, syncdir_data ):
         return
     if msgtype == 'start':
         if src in dir_data or src in working:
-            dups[ src ] = parts
+            dups[ src ] = pprint.pformat( rec )
             return
         working[ src ] = { 'start': ts,
                            'num_src_dirs': 0,
