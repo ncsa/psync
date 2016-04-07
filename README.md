@@ -10,23 +10,21 @@ parallelization.
 * [ Redis 3.0.6 ] ( http://redis.io/ )
 * [ RabbitMQ ] ( http://www.rabbitmq.com/ )
 * [ Python Virtual Env ] ( http://docs.python-guide.org/en/latest/dev/virtualenvs/ )
-* [ pylut ] ( https://github.com/ncsa/pylut ) (See note #2)
-* (Additional requirements are all python libraries and will be installed below)
 
 # Notes
-1. All commands in this readme are assumed to be run as root unless otherwise 
-specified.
-2.  This version depends on [ pylut ] ( https://github.com/ncsa/pylut ), thus it
-is specific to Lustre.  Psync can be made more generic by replacing the
-dependency on Pylut with any other library that provides generic file copy
-operations.  It should be possible to dynamically check the filesystem type of
-both source and target and load the appropriate module.  As such, the Pylut
-module should only be loaded if both source and target are of type Lustre.
-Otherwise, a generic (non-Lustre-stripe-aware) copy module would be loaded.
-Also, additional modules could be written that are specific to other filesystem
-types (to take advantage of filesystem specific optimizations) and thus these
-could be loaded if the source and target filesystems are both of the specific
-type.
+1. All commands in this readme are assumed to be run as root unless otherwise
+   specified.
+1. This version depends on [ pylut ] (https://github.com/ncsa/pylut), (included
+   as a submodule) thus it is specific to Lustre.  Psync can be made more
+   generic by replacing the dependency on Pylut with any other library that
+   provides generic file copy operations.  It should be possible to dynamically
+   check the filesystem type of both source and target and load the appropriate
+   module.  As such, the Pylut module should only be loaded if both source and
+   target are of type Lustre.  Otherwise, a generic (non-Lustre-stripe-aware)
+   copy module would be loaded.  Also, additional modules could be written that
+   are specific to other filesystem types (to take advantage of filesystem
+   specific optimizations) and thus these could be loaded if the source and
+   target filesystems are both of the specific type.
 
 
 # Installation
@@ -49,8 +47,6 @@ type.
   * This example assumes `$HOME` is sufficient (where the current user is a 
     regular user, **not root**)
   * `cd ~`  *non-root*
-* Get pylut (required for psync)
-  * `git clone https://github.com/ncsa/pylut.git` *non-root*
 * Get psync
   * `git clone https://github.com/ncsa/psync.git` *non-root*
 * Create a virtualenv for psync
