@@ -49,8 +49,11 @@ parallelization.
   * `cd ~`  *non-root*
 * Get psync
   * `git clone https://github.com/ncsa/psync.git` *non-root*
+  * Update pylut (included submodule)
+    * `cd psync` *non-root*
+    * `git submodule init` *non-root*
+    * `git submodule update` *non-root*
 * Create a virtualenv for psync
-  * `cd psync` *non-root*
   * `virtualenv venv` *non-root*
   * `source venv/bin/activate` *non-root*
 * Install the additional python required libraries
