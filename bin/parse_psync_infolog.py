@@ -10,6 +10,16 @@ import logging
 
 logr = logging.getLogger( __name__ )
 
+default_dirdata = { 'start': 0,
+                    'num_src_dirs': 0,
+                    'num_src_files': 0,
+                    'num_tgt_dirs': 0,
+                    'num_tgt_files': 0,
+                    'srctot': 0,
+                    'end': 0,
+                    'elapsed': 999999,
+                   }
+
 
 def process_cmdline():
     parser = argparse.ArgumentParser()
@@ -64,17 +74,8 @@ def process_syncdir_stats( rec, syncdir_data ):
         if src in dir_data or src in working:
             dups[ src ] = pprint.pformat( rec )
             return
-        working[ src ] = { 'start': ts,
-                           'num_src_dirs': 0,
-                           'num_src_files': 0,
-#                           'num_src_symlinks': 0,
-                           'num_tgt_dirs': 0,
-                           'num_tgt_files': 0,
-#                           'num_tgt_symlinks': 0,
-                           'srctot': 0,
-                           'end': 0,
-                           'elapsed': 999999,
-                           }
+        working[ src ] = default_dirdata.copy()
+        working[ src ][ 'start' ] = ts
         dir_data[ src ] = working[ src ]
     elif msgtype == 'info':
         working[ src ] [ 'srctot' ] = 0
@@ -174,11 +175,15 @@ def run( args ):
     with open( args.infile, 'rb' ) as f:
         try:
             while (1):
+                total_records += 1
                 rec = cbor.load( f )
                 process_start_end_times( rec, time_data )
                 count_sync_types( rec, sync_types )
-                process_syncdir_stats( rec, syncdir_data )
-                total_records += 1
+                try:
+                    process_syncdir_stats( rec, syncdir_data )
+                except ( KeyError ) as e:
+                    logr.warning( 'LogRecord={0}, Error={1}'.format(
+                        total_records, e ) )
                 if total_records % 1000000 == 0:
                     elapsed_secs = int( time.time() ) - starttime
                     logr.info( 'Processed {0} records in {1} secs'.format(
