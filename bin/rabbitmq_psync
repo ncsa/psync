@@ -138,12 +138,13 @@ case "$1" in
             $RMQCTL rotate_logs $*
         ;;
     list_queues|lq)
-            $RMQCTL list_queues name messages messages_ready messages_unacknowledged
+            $RMQCTL list_queues -p ${PSYNCRMQVHOST} name messages messages_ready messages_unacknowledged
         ;;
     cmd) 
             # Run a rabbitmqctl command directly
-            shift
-            $RMQCTL $*
+            arg=$2
+            shift 2
+            $RMQCTL "${arg}" -p ${PSYNCRMQVHOST} $*
         ;;
     clean)
             # After a failed start, there may be cruft to clean up.  This option is
