@@ -23,9 +23,4 @@ $RMQCTL add_vhost $vhost
 
 $RMQCTL set_permissions -p $vhost $PSYNCRMQUSER ".*" ".*" ".*"
 
-#$RMQCTL add_user adm admpass
-#$RMQCTL set_user_tags adm administrator
-#$RMQCTL set_permissions -p / adm ".*" ".*" ".*"
-
-
 set +x
