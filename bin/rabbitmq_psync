@@ -79,7 +79,7 @@ function rmq_url_exists {
 
 
 function save_rmq_url {
-    rmq_url="amqp://${PSYNCRMQUSER}:${PSYNCRMQPASS}@${RMQ_BIND_IP}:${RMQPORT}/${PSYNCRMQVHOST}/"
+    rmq_url="amqp://${PSYNCRMQUSER}:${PSYNCRMQPASS}@${RMQ_BIND_IP}:${RMQPORT}/${PSYNCRMQVHOST}"
     rmq_url_exists && croak "Rabbitmq url already exists in $PSYNCRMQURLFILE"
     sed -i.~ -e "\$aBROKER_URL = '$rmq_url'" "$PSYNCRMQURLFILE"
 }
