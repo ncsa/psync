@@ -10,6 +10,7 @@ def process_cmdline():
     help_txt = """
         For dry-run, set max-iterations to 0 (zero).
     """
+    default_worker_names = [ 'psync_worker' ]
     parser = argparse.ArgumentParser( epilog=help_txt )
     parser.add_argument( '--max-iterations', '-x', type=int, metavar='N',
         help="Never try more than X times to adjust pool size. (default is largest adjustment size to make)" )
@@ -22,24 +23,30 @@ def process_cmdline():
         help='Current process count * N.' )
     group.add_argument( '--increment', '-i', type=int, metavar='N',
         help='Increment current process count by N. Use a negative number for decrement.' )
+    parser.add_argument( 'workernames', nargs=argparse.REMAINDER,
+        help='Worker names or globs to affect. (default={0})'.format(
+            ' '.join( default_worker_names ) ) )
     default_options = {
         'max_iterations': None,
         'pause_amount': 2
     }
     parser.set_defaults( **default_options )
     args = parser.parse_args()
+    if len( args.workernames ) < 1:
+        args.workernames = default_worker_names
     return args
 
 
-def get_cur_worker_stats():
+def get_cur_worker_stats( args ):
     workers = {}
     worker_stats = psync.app.control.inspect().stats()
     if worker_stats is not None:
         for workername, stats in worker_stats.iteritems():
-            workers[ workername ] = {
-                'maxPcount': stats[ 'pool' ][ 'max-concurrency' ],
-                'curPcount': len( stats[ 'pool' ][ 'processes' ] ),
-                }
+            if any( [ x in workername for x in args.workernames ] ):
+                workers[ workername ] = {
+                    'maxPcount': stats[ 'pool' ][ 'max-concurrency' ],
+                    'curPcount': len( stats[ 'pool' ][ 'processes' ] ),
+                    }
     return workers
     
 
@@ -114,7 +121,7 @@ def show_summary( old, new ):
 
 def run():
     args = process_cmdline()
-    orig_stats = get_cur_worker_stats()
+    orig_stats = get_cur_worker_stats( args )
     if len( orig_stats ) < 1:
         sys.exit( 'No workers found' )
     calc_adjustment_size( orig_stats, args )
@@ -133,7 +140,7 @@ def run():
         calc_adjustment_size( old_stats, args )
         try_adjustments( old_stats )
         time.sleep( args.pause_amount )
-        new_stats = get_cur_worker_stats()
+        new_stats = get_cur_worker_stats( args )
 #        show_summary( old_stats, new_stats )
         # check if tgt has been met
         for worker, stats in old_stats.iteritems():
@@ -148,7 +155,7 @@ def run():
             keep_going = False
             logging.info( "Success! All workers are at expected size." )
         itercount = itercount + 1
-    new_stats = get_cur_worker_stats()
+    new_stats = get_cur_worker_stats( args )
     show_summary( orig_stats, new_stats )
 
 
