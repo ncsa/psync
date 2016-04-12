@@ -236,6 +236,10 @@ case "$1" in
         save_redis_url || croak "Unable to save redis url to file"
         save_broker_url || croak "Unable to save broker url to file"
         ;;
+    cmd)
+        shift
+        $CLIEXEC -p $REDISPORT $*
+        ;;
     *)
         usage
         ;;
