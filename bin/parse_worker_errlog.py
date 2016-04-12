@@ -57,7 +57,10 @@ def process_cmdline():
         "showall": False,
     }
     parser.set_defaults( **default_options )
-    args = parser.parse_args()
+    if __name__ == '__main__':
+        args = parser.parse_args()
+    else:
+        args = parser.parse_args( args='' )
     return args
 
 
