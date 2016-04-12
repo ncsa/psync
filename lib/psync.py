@@ -9,7 +9,8 @@ import pylut
 import redis_logger
 import fsitem
 import time
-
+import celeryconfig
+import broker_url
 
 # A note about naming convention of functions in this module:
 # sync_* = celery task
@@ -17,16 +18,17 @@ import time
 
 logger = celery.utils.log.get_task_logger(__name__)
 app = celery.Celery( 'psync' )
-app.config_from_object('psync_celery_config')
-app.config_from_object('broker_url')
+# Collect config settings from config modules
+app.conf.update( **{ k:getattr( celeryconfig,k ) 
+    for k in dir( celeryconfig ) if not k.startswith('__') } )
+app.conf.update( **{ k:getattr( broker_url,k ) 
+    for k in dir( broker_url ) if not k.startswith('__') } )
 redisconf_fn = os.environ[ 'PSYNCREDISURLFILE' ]
 redisconf_name = os.path.basename( redisconf_fn ).split( '.py' )[0]
 redisconf = __import__( redisconf_name )
 # TODO Get log queue_name from config file (or cmdline?)
 logr = redis_logger.Redis_Logger( url=redisconf.BROKER_URL, queue_name='psync_log' )
-
-# TODO - remove rsyncpath after moving symlink_sync to external library
-rsyncpath = os.environ[ 'PYLUTRSYNCPATH' ]
+#logr.info( 'CELERY_ROUTES: {0}'.format( app.conf.CELERY_ROUTES ) )
 
 psynctmpdir = os.environ[ 'PSYNCTMPDIR' ]
 psyncrmdir = os.environ[ 'PSYNCRMDIR' ]
@@ -123,7 +125,7 @@ def sync_dir( src, tgt, psyncopts, rsyncopts ):
         newtgt = tgt_files[ fname ]
         file_sync( newsrc, newtgt, psyncopts, rsyncopts )
     # sync the (local) dir to set metadata
-    dir_sync_meta.apply_async( src, tgt, psyncopts, rsyncopts )
+#    sync_dir_meta.apply_async( src, tgt, psyncopts, rsyncopts )
     logr.info( synctype = 'SYNCDIR',
                msgtype  = 'end',
                src      = str( src ),
@@ -131,7 +133,7 @@ def sync_dir( src, tgt, psyncopts, rsyncopts ):
 
 
 @app.task( base=Psync_Task, queue='directories' )
-def dir_sync_meta( src, tgt, psyncopts, rsyncopts ):
+def sync_dir_meta( src, tgt, psyncopts, rsyncopts ):
     """
     Sync metadata only of a directory
     :param src FSItem: src directory
