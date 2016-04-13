@@ -154,33 +154,7 @@ if __name__ == "__main__":
             errors = pickle.load( f )
     else:
         errors = parse_files( args.files )
-    print( format_ooutput( errors, args ) )
-#    if args.show > 0:
-#        e = err_indices[ args.show ]
-#        qty = errors[e][ 'count' ]
-#        lines = errors[e][ 'data' ]
-#        print( 'Error # {0:02d}  Qty:{1}'.format( args.show, qty ) )
-#        print( '='*50 )
-#        print( e )
-#        print( '-'*50 )
-#        print( ''.join( lines ) )
-#        print( '' )
-#    else:
-#        for i, e in err_indices.iteritems():
-#            qty = errors[e][ 'count' ]
-#            total_error_count += qty
-#            print( 'Error # {0:02d}  Qty:{1}'.format( i, qty ) )
-#            print( '='*20 )
-#            print( e )
-#            if args.showall:
-#                lines = errors[e][ 'data' ]
-#                print( '-'*50 )
-#                print( ''.join( lines ) )
-#            print( "" )
-#        print( "" )
-#        print( '='*20 )
-#        print( "Total Error Count: {0}".format( total_error_count ) )
-#        print( '='*20 )
+    print( format_output( errors, args ) )
     if args.picklefile and not os.path.exists( args.picklefile ):
         with open( args.picklefile, 'wb' ) as f:
             pickle.dump( errors, f )
