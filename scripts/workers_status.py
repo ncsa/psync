@@ -43,7 +43,7 @@ for worker, reservedlist in I.reserved().iteritems():
 
 # get active_queues
 activequeuenames = []
-if args.listqueues:
+if args.showqueues:
     for worker, qlist in I.active_queues().iteritems():
         data[ worker ][ 'ACTIVEQUEUES' ] = qlist
         for q in qlist:
@@ -52,7 +52,7 @@ qnames = set( activequeuenames )
 
 # print summary
 fmt = '{name:<25} {maxP:>9} {curP:>9} {numActv:>7} {numRsrv:>7}'
-if args.listqueues:
+if args.showqueues:
     for name in qnames:
         fmt = fmt + ' {{{0}:>{1}}}'.format( name, len( name ) )
 
@@ -62,7 +62,7 @@ hdrs = dict( name   ='Worker',
              numActv='NumActv', 
              numRsrv='NumRsrv'
              )
-if args.listqueues:
+if args.showqueues:
     hdrs.update( { k:k for k in qnames } )
 print( fmt.format( **hdrs ) )
 
@@ -72,7 +72,7 @@ totals = { 'name'   : 0,
            'numActv': 0,
            'numRsrv': 0,
          }
-if args.listqueues:
+if args.showqueues:
     totals.update( { k:0 for k in qnames } )
 
 for name in sorted( data.keys() ):
@@ -86,7 +86,7 @@ for name in sorted( data.keys() ):
         )
     if args.ignoreidle and keys_vals[ 'numActv' ] < 1 and keys_vals[ 'numRsrv' ] < 1:
         continue
-    if args.listqueues:
+    if args.showqueues:
         activequeues = [ d['name'] for d in data[ name ][ 'ACTIVEQUEUES' ] ]
         keys_vals.update( { k:'' for k in qnames } )
         keys_vals.update( { k:'*' for k in qnames if k in activequeues } )
@@ -98,7 +98,7 @@ for name in sorted( data.keys() ):
     totals[ 'curP' ]    += keys_vals[ 'curP' ]
     totals[ 'numActv' ] += keys_vals[ 'numActv' ]
     totals[ 'numRsrv' ] += keys_vals[ 'numRsrv' ]
-    if args.listqueues:
+    if args.showqueues:
         for qname in activequeues:
             totals[ qname ] += 1
 print( '\nTotals:' )
