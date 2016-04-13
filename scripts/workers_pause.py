@@ -3,7 +3,7 @@ import argparse
 import pprint
 
 def process_cmdline():
-    default_queue_name = 'celery'
+    default_queue_name = psync.app.conf.CELERY_DEFAULT_QUEUE
     parser = argparse.ArgumentParser(
         description='Tell all workers to stop consuming from the specified queue.' )
     parser.add_argument( '--discard_reserved', '-r', action='store_true',
@@ -18,12 +18,6 @@ def process_cmdline():
     parser.add_argument( 'queuenames', nargs=argparse.REMAINDER,
         help='Queue name(s) to stop consuming from. (default={0})'.format( 
             default_queue_name ) )
-#    parser.set_defaults(
-#        discard_reserved=False,
-#        discard_waiting=False,
-#        verbose=False,
-#        unpause=False,
-#        )
     args = parser.parse_args()
     if len( args.queuenames ) < 1:
         args.queuenames = [ default_queue_name ]
@@ -110,6 +104,8 @@ if __name__ == '__main__':
             do_discard_reserved( args )
         if args.kill_active:
             do_kill_active( args )
+        if args.discard_waiting:
+            do_discard_waiting( args )
 
 
 
