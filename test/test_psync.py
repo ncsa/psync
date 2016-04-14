@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 import pprint
 import fsitem
@@ -152,7 +153,6 @@ def error_free_sync():
         rv = False
         print( 'Task Errors:' )
         pprint.pprint( task_errs )
-    # TODO ?? check RMQ for errors ??
     return rv
 
 
@@ -187,19 +187,18 @@ def in_sync( src, tgt ):
     args.append( '{0}/'.format( src ) )
     args.append( '{0}/'.format( tgt ) )
     ( output, errput ) = runcmd( cmd, opts, args )
-    #TODO-remove this filter once dir mtimes are fixed (issue #2)
-    # filter out known dir mtime mismatches
-#    leftovers = []
-#    for line in output.splitlines():
-#        if line.startswith( '.d..t...... '):
-#            continue
-#        leftovers.append( line )
-#    output = leftovers
+    # the top level dirs will never match, this will always be the first line
+    lines = output.splitlines()
+    if lines[0] == '.d..t...... ./':
+        lines.pop(0)
+    output = lines
     # any output from rsync indicates incorrect sync behavior
     if len( errput ) < 1 and len( output ) < 1:
         rv = True
     else:
+        print( 'RSYNC OUTPUT' )
         pprint.pprint( output )
+        print( 'RSYNC ERRORS' )
         pprint.pprint( errput )
     return rv
 
