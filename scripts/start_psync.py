@@ -94,7 +94,8 @@ def run():
                'pre_checksums', 'post_checksums' ):
         rsyncopts[ k ] = getattr( args, k )
     # Seed the process
-    psync.sync_dir.delay( src, tgt, psyncopts, rsyncopts )
+    psync.sync_dir.apply_async( ( src, tgt, psyncopts, rsyncopts ) )
+    psync.schedule_final_dir_sync.apply_async( args=( 300, ), countdown=300 )
 
 if __name__ == '__main__':
     run()

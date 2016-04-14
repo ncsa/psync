@@ -125,7 +125,7 @@ def sync_dir( src, tgt, psyncopts, rsyncopts ):
         newtgt = tgt_files[ fname ]
         file_sync( newsrc, newtgt, psyncopts, rsyncopts )
     # sync the (local) dir to set metadata
-#    sync_dir_meta.apply_async( src, tgt, psyncopts, rsyncopts )
+    sync_dir_meta.apply_async( ( src, tgt, psyncopts, rsyncopts ) )
     logr.info( synctype = 'SYNCDIR',
                msgtype  = 'end',
                src      = str( src ),
@@ -326,6 +326,94 @@ def file_sync( src, tgt, psyncopts, rsyncopts ):
     else:
         sync_file.apply_async( ( src, tgt, rsyncopts ) )
 
+
+@app.task( base=Psync_Task )
+def schedule_final_dir_sync( secs=300 ):
+    """
+    If all the regular syncs are done, enable all workers to start working on the
+    final sync_dir_meta tasks.
+    """
+    #TODO-get queue name from app.conf.CELERY_ROUTES
+    if dirs_and_files_are_done():
+        app.control.add_consumer( 'directories' )
+    else:
+        schedule_final_dir_sync.apply_async( args=( secs, ), countdown=secs )
+
+
+def dirs_and_files_are_done():
+    """
+    Return True if all dir and file sync actions are complete, False otherwise
+    """
+    rvparts = [ True ]
+    # Check queue lengths
+    qnames = [ app.conf.CELERY_DEFAULT_QUEUE ]
+    #    #TODO - get list of queues from CELERY_ROUTES
+    #    for x,y in app.conf.CELERY_ROUTES.iteritems():
+    #        q = y['queue']
+    #        if q != 'directories':
+    #            qnames.append( q )
+    qnames.extend( [ 'hardlinks' ] )
+    logr.info( 'qnames: {0}'.format( qnames ) )
+    total_len = sum( queue_lengths( qnames ) )
+    logr.info( 'total_len: {0}'.format( total_len ) )
+    if total_len != 0:
+        rvparts.append( False )
+    # Check for idle workers
+    taskcount = 0
+    for func in ( active_tasks, reserved_tasks ):
+        for name, count in func().iteritems():
+            if 'schedule_final_dir_sync' not in name:
+                taskcount += count
+    rvparts.append( taskcount == 0 )
+    return all( rvparts )
+
+
+def active_tasks():
+    """
+    Return count of active tasks by task name
+    :return dict: keys are task names, values are int (count of active tasks)
+    """
+    I = app.control.inspect()
+    data = {}
+    for w, tlist in I.active().iteritems():
+        for task in tlist:
+            name = task[ 'name' ]
+            if name not in data:
+                data[ name ] = 0
+            data[ name ] += 1
+    return data
+
+
+def reserved_tasks():
+    """
+    Return count of reserved tasks by task name
+    :return dict: keys are task names, values are int (count of active reserved)
+    """
+    I = app.control.inspect()
+    data = {}
+    for w, tlist in I.reserved().iteritems():
+        for task in tlist:
+            name = task[ 'name' ]
+            if name not in data:
+                data[ name ] = 0
+            data[ name ] += 1
+    return data
+
+
+def queue_lengths( qnames ):
+    """
+    Return lengths for each queue in qnames
+    :param qnames list of queue names
+    :return list: list of queue lengths, values match positions of queuenames in qnames
+    """
+    qlens = []
+    for q in qnames:
+        with app.connection_or_acquire() as conn:
+            qlens.append( 
+                conn.default_channel.queue_declare(
+                    queue=q, passive=True).message_count
+            )
+    return qlens
 
 if __name__ == '__main__':
   raise UserWarning( "Cmdline invocation not supported" )

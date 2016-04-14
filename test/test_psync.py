@@ -19,6 +19,8 @@ psyncopts = dict( minsecs = 0,
                   pre_checksums = False
                 )
 
+max_waitfor = 60
+
 def _truncate( fn ):
     with open( str( fn ), 'wb' ) as fh:
         pass
@@ -46,25 +48,43 @@ def psync_is_complete():
     """ def psync_is_complete():
         Return True if psync is complete, False otherwise
     """
-    return workers_are_idle()
+    # check for idle workers
+    rvparts = [ workers_are_idle() ]
+    # check for empty message queues
+    rvparts.append( queues_are_empty() )
+    return all( rvparts )
+
+
+def queues_are_empty():
+    """
+    """
+    cmd = [ os.environ[ 'PSYNCBASEDIR' ] + '/bin/rabbitmq_psync', 'lq' ]
+    ( output, errput ) = runcmd( cmd )
+    all_lens = 0
+    for line in output.splitlines():
+        if line.startswith( 'Listing queues' ):
+            continue
+        parts = line.split()
+        all_lens += sum( map( int, parts[1:] ) )
+    return all_lens == 0
 
 
 def workers_are_idle():
     """ def workers_are_idle():
         Return True if workers are idle, False otherwise
     """
-    rv = False
+    rvparts = [ True ]
     # get per worker active tasks
     num_active_tasks = 0
     for worker, activelist in psync.app.control.inspect().active().iteritems():
         num_active_tasks += len( activelist )
+    rvparts.append( num_active_tasks == 0 )
     # get per worker reserved tasks
     num_reserved_tasks = 0
     for worker, reservedlist in psync.app.control.inspect().reserved().iteritems():
         num_reserved_tasks += len( reservedlist )
-    if num_active_tasks == 0 and num_reserved_tasks == 0:
-        rv = True
-    return rv
+    rvparts.append( num_reserved_tasks == 0 )
+    return all( rvparts )
 
 
 def get_redis_logs():
@@ -132,16 +152,28 @@ def error_free_sync():
         rv = False
         print( 'Task Errors:' )
         pprint.pprint( task_errs )
+    # TODO ?? check RMQ for errors ??
     return rv
 
 
 #TODO - this should probably be a fixture
 def cleanup():
     """
-    Cleanup logs and anythign else
+    Cleanup logs and anything else
     """
     get_worker_errors( cleanup=True )
     get_task_errors( cleanup=True )
+    reset_worker_queues()
+
+
+def reset_worker_queues():
+    """
+    Set workers to consume from their normal, default queues
+    """
+    # psync workers consume from 'directories' only at the tail end of a sync
+    # unset this before starting a new psync test
+    results = psync.app.control.cancel_consumer( 'directories', reply=True )
+    pprint.pprint( results )
     
 
 def in_sync( src, tgt ):
@@ -150,18 +182,19 @@ def in_sync( src, tgt ):
     """
     rv = False
     cmd = [ os.environ[ 'PYLUTRSYNCPATH' ] ]
-    opts = { '--timeout': 60 }
+    opts = { '--timeout': 30 }
     args = [ '-nirlHAtpog', '--specials' ]
     args.append( '{0}/'.format( src ) )
     args.append( '{0}/'.format( tgt ) )
     ( output, errput ) = runcmd( cmd, opts, args )
     #TODO-remove this filter once dir mtimes are fixed (issue #2)
     # filter out known dir mtime mismatches
-    leftovers = []
-    for line in output.splitlines():
-        if not line.startswith( '.d..t...... '):
-            leftovers.append( line )
-    output = leftovers
+#    leftovers = []
+#    for line in output.splitlines():
+#        if line.startswith( '.d..t...... '):
+#            continue
+#        leftovers.append( line )
+#    output = leftovers
     # any output from rsync indicates incorrect sync behavior
     if len( errput ) < 1 and len( output ) < 1:
         rv = True
@@ -180,9 +213,9 @@ def test_sync_no_hardlinks( testdir ):
     src = fsitem.FSItem( testdir.config.SOURCE_DIR )
     tgt = fsitem.FSItem( testdir.config.DEST_DIR )
     psync.sync_dir.delay( src, tgt, psyncopts, rsyncopts )
-    assert wait_for( psync_is_complete, max_seconds=6000 )
+    psync.schedule_final_dir_sync.apply_async( args=( 10, ), countdown=10 )
+    assert wait_for( psync_is_complete, max_seconds=max_waitfor )
     assert error_free_sync()
-    # TODO ?? check RMQ for errors ??
     # clear any cached meta data
     src.update()
     tgt.update()
@@ -199,9 +232,9 @@ def test_full_sync( testdir ):
     src = fsitem.FSItem( testdir.config.SOURCE_DIR )
     tgt = fsitem.FSItem( testdir.config.DEST_DIR )
     psync.sync_dir.delay( src, tgt, psyncopts, rsyncopts )
-    assert wait_for( psync_is_complete, max_seconds=6000 )
+    psync.schedule_final_dir_sync.apply_async( args=( 10, ), countdown=10 )
+    assert wait_for( psync_is_complete, max_seconds=max_waitfor )
     assert error_free_sync()
-    # TODO ?? check RMQ for errors ??
     # clear any cached meta data
     src.update()
     tgt.update()
