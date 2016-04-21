@@ -92,9 +92,13 @@ It is also assumed that psync is running on a cluster.
   2. `/path/to/psync/bin/redis_psync start`
   3. `/path/to/psync/bin/redis_psync status`
 3. Start psyncd on the worker nodes
-  1. On each worker node: `/path/to/psync/bin/psyncd start`
+  1. On each worker node:
     1. `/path/to/psync/bin/psyncd start`
-    2. `/path/to/psync/bin/psyncd status`
+    1. `/path/to/psync/bin/psyncd status`
+  1. On ONLY ONE worker node: `/path/to/psync/bin/psyncd start_hardlinker`
+    * NOTE: There is no check to prevent multiple hardlinker processes.  If
+      multiple are started, there is potential for a race condition that could
+      cause hardlink creation to fail.
 4. Start a sync
   1. On a single worker node:
     1. `/path/to/psync/bin/start_psync [OPTIONS] /src/dir tgt/dir
@@ -130,7 +134,7 @@ A psync is finished when all of the following are true:
 1. Stop psyncd services (on workers)
   1. `/path/to/psync/bin/workers_shutdown`
   * Note: can also use `/path/to/psync/bin/psyncd stop` on each worker node, 
-    but using `workers_shutdown` is usually easier and faster.
+    but using `workers_shutdown` is usually easier, faster and safer.
 2. Stop redis service
   1. Login to the machine that is running redis
   2. `/path/to/psync/bin/redis_psync stop`
@@ -175,6 +179,7 @@ A sample run might look something like this:
   * `pcmd -f $WCOLLREDIS "$PSYNCBASEDIR/bin/redis_psync start"`
 * Start workers
   * `pcmd -f $WCOLL "$PSYNCBASEDIR/bin/psyncd start"`
+  * `pcmd -f $WCOLLREDIS "$PSYNCBASEDIR/bin/psyncd start_hardlinker"`
 * Check that all workers started
   * `pcmd -f $WCOLLREDIS "$PSYNCBASEDIR/bin/workers_status"`
 * (Optional) Limit the number of processes per worker
