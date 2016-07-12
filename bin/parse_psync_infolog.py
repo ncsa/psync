@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python
 from __future__ import print_function
 import cbor
 import argparse
@@ -28,7 +28,7 @@ def process_cmdline():
         help='Source file system has N inodes total. '
              'Used to estimate completion progress.' )
     default_options = {
-        'inodes': 124674897,
+        'inodes': 220531082,
     }
     parser.set_defaults( **default_options )
     args = parser.parse_args()
@@ -45,7 +45,11 @@ def process_start_end_times( rec, time_data ):
 
 
 def count_sync_types( rec, sync_types ):
-    stype = rec[ 'synctype' ]
+    try:
+        stype = rec[ 'synctype' ]
+    except( KeyError ) as e:
+        logr.warning( "No synctype in record: {0}".format( rec ) )
+        return
     mtype = 'None'
     try:
         mtype = rec[ 'msgtype' ]
@@ -177,6 +181,7 @@ def run( args ):
             while (1):
                 total_records += 1
                 rec = cbor.load( f )
+                #logr.debug( 'Processing record: {0}'.format( rec ) )
                 process_start_end_times( rec, time_data )
                 count_sync_types( rec, sync_types )
                 try:
